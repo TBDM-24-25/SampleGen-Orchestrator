@@ -1,0 +1,47 @@
+# If no image is provided, the job will be executed with a default image for this data type.
+data_type: {{ data_type }}
+topic: {{ topic }}
+operation: {{ operation }}
+# No need for Kafka host/port here
+# The job handler will use the Kafka host/port from the configuration file
+container_image_name: "{{ container_image_name }}"
+container_registry:
+  url: "{{ container_registry.url }}" # this should also include the tag if required. For example, myregistry.azurecr.io/my-repo/my-image:latest
+  type: {{ container_registry.type }}
+  user_credentials:
+ {% if container_registry.user_credentials.token %}
+    token: "{{ container_registry.user_credentials.token }}" # Can be used instead of username and password
+    {% else %}
+    username: "{{ container_registry.user_credentials.username }}"
+    password: "{{ container_registry.user_credentials.password }}"
+    {% endif %}
+computation_duration_in_seconds: {{ computation_duration_in_seconds }}
+# Can be defined via parameters when the image is started. See documentation https://docs.docker.com/reference/cli/docker/container/run/
+resource_limits:
+  cpu: {{ resource_limits.cpu }}
+  memory: {{ resource_limits.memory }}
+# If the container nodes fail, the job follows the retry policy with the goal of successful execution.
+retry_policy:
+  retry_on_failure: {{ retry_policy.retry_on_failure }}
+  number_of_retries: {{ retry_policy.number_of_retries }}
+  backoff_period_in_ms: {{ retry_policy.backoff_period_in_ms }}
+# Can be defined via parameters when the image is started. See documentation https://docs.docker.com/reference/cli/docker/container/run/
+ports:
+  host_port: {{ ports.host_port }}
+  container_port: {{ ports.container_port }}
+# Can be defined via parameters when the image is started. See documentation https://docs.docker.com/reference/cli/docker/container/run/
+# Could be useful if additional environment variables are required for the image to run.
+environment_variables:
+{% for env_var in environment_variables %}
+  - name: {{ env_var.name }}
+    value: {{ env_var.value }}
+{% endfor %}
+# Supports traceability of the job.
+metadata:
+  user: "{{ metadata.user }}"
+  job_id: "{{ metadata.job_id }}"
+  created_at: "{{ metadata.created_at }}"
+  requested_at: "{{ metadata.requested_at }}"
+  run_at: "{{ metadata.run_at }}"
+  description: "{{ metadata.description }}"
+  # Connection stream not required in schema since it is already defined in the configuration file. Only makes sense for multiple Kafka clusters.

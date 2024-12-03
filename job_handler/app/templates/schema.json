@@ -1,0 +1,48 @@
+{
+    "data_type": "{{ data_type }}",
+    "topic": "{{ topic }}",
+    "operation": "{{ operation }}",
+    "container_image_name": "{{ container_image_name }}",
+    "container_registry": {
+      "url": "{{ container_registry.url }}",
+      "type": "{{ container_registry.type }}",
+      "user_credentials": {
+        {% if container_registry.user_credentials.token -%}
+        "token": "{{ container_registry.user_credentials.token }}"
+        {%- else -%}
+        "username": "{{ container_registry.user_credentials.username }}",
+        "password": "{{ container_registry.user_credentials.password }}"
+        {%- endif %}
+      }
+    },
+    "computation_duration_in_seconds": {{ computation_duration_in_seconds }},
+    "resource_limits": {
+      "cpu": {{ resource_limits.cpu }},
+      "memory": "{{ resource_limits.memory }}"
+    },
+    "retry_policy": {
+      "retry_on_failure": {{ retry_policy.retry_on_failure }},
+      "number_of_retries": {{ retry_policy.number_of_retries }},
+      "backoff_period_in_ms": {{ retry_policy.backoff_period_in_ms }}
+    },
+    "ports": {
+      "host_port": {{ ports.host_port }},
+      "container_port": {{ ports.container_port }}
+    },
+    "environment_variables": [
+      {% for env_var in environment_variables -%}
+      {
+        "name": "{{ env_var.name }}",
+        "value": "{{ env_var.value }}"
+      }{% if not loop.last %},{% endif %}
+      {%- endfor %}
+    ],
+    "metadata": {
+      "user": "{{ metadata.user }}",
+      "job_id": "{{ metadata.job_id }}",
+      "created_at": "{{ metadata.created_at }}",
+      "requested_at": "{{ metadata.requested_at }}",
+      "run_at": "{{ metadata.run_at }}",
+      "description": "{{ metadata.description }}"
+    }
+  }

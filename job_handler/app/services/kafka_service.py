@@ -32,7 +32,8 @@ class KafkaService:
         # Check if the topic already exists
         existing_topics = self.admin_client.list_topics().topics
         if self.topic_name_job_request in existing_topics:
-            raise ValueError(f"Topic {self.topic_name_job_request} already exists")
+            print(f"Topic {self.topic_name_job_request} already exists")
+            return
 
         # Create the new topic
         new_topic = NewTopic(self.topic_name_job_request, num_partitions=1, replication_factor=1)
@@ -47,7 +48,7 @@ class KafkaService:
 
 
     def __create_job_message(self, job):
-        with open(f"../../../schema_registry/job_config.avsc") as f:
+        with open(f"../../schema_registry/job_config.avsc") as f:
             schema_str = f.read()
 
         schema = Schema(schema_str, 'AVRO')

@@ -1,8 +1,13 @@
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 import os
 
 class BaseConfig:
     def __init__(self) -> None:
+        dotenv_path = find_dotenv()
+        if dotenv_path:
+            print(f"Loading .env file from: {dotenv_path}")
+        else:
+            print("No .env file found")
         load_dotenv()
         self.load_environment_variables()
 
@@ -11,9 +16,9 @@ class BaseConfig:
 
 class KafkaConfig(BaseConfig):
     def __init__(self):
-        super().__init__()
         self.bootstrap_servers: str = ''
         self.topic_name_job_request: str = ''
+        super().__init__()
 
     def load_environment_variables(self) -> None:
         self.bootstrap_servers: str = os.getenv('KAFKA_BOOTSTRAP_SERVERS', '')
@@ -24,8 +29,8 @@ class KafkaConfig(BaseConfig):
 
 class SchemaRegistryConfig(BaseConfig):
     def __init__(self):
-        super().__init__()
         self.schema_registry_url: str = ''
+        super().__init__()
 
     def load_environment_variables(self) -> None:
         self.schema_registry_url: str = os.getenv('SCHEMA_REGISTRY_URL', '')
@@ -35,10 +40,10 @@ class SchemaRegistryConfig(BaseConfig):
 
 class DatabaseConfig(BaseConfig):
     def __init__(self):
-        super().__init__()
         self.db_password: str = ''
         self.db_user: str = ''
         self.db_host: str = ''
+        super().__init__()
 
     def load_environment_variables(self) -> None:
         self.db_host: str = os.getenv('DB_HOST', '')

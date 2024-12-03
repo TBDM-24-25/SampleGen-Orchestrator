@@ -46,6 +46,10 @@ data = {
 }
 
 
+def process_message(msg):
+    print(f"Received message: {msg.value().decode('utf-8')} from topic: {msg.topic()}")
+
+
 def main():
     kafka_service = KafkaService()
     schema_service = SchemaService()

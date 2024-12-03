@@ -1,5 +1,4 @@
 from services.kafka_service import KafkaService
-from services.schema_service import SchemaService
 
 
 # Mock data
@@ -52,25 +51,14 @@ def process_message(msg):
 
 def main():
     kafka_service = KafkaService()
-    schema_service = SchemaService()
-    schema = schema_service.create_schema(data=data)
-
-    topic_name = 'my_topic5'
-    try:
-        kafka_service.create_topic(topic_name)
-    except ValueError as e:
-        print(f"Topic already exists: {e}")
-    except RuntimeError as e:
-        print(f"Error creating topic: {e}")
-        return
 
     try:
-        kafka_service.send_message(topic_name, schema)
+        kafka_service.send_job(data)
     except RuntimeError as e:
         print(f"Error sending message: {e}")
 
     # Consume messages from the topic
-    kafka_service.consume_messages([topic_name], group_id='my_group', process_message=process_message)
+    kafka_service.consume_messages([kafka_service.topic_name_job_request], group_id='my_group', process_message=process_message)
 
 if __name__ == "__main__":
     main()

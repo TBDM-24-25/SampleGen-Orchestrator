@@ -1,26 +1,41 @@
 from confluent_kafka import Producer, KafkaError, Consumer, Message
 from confluent_kafka.admin import AdminClient, NewTopic
-from config import KafkaConfig
+from config import KafkaConfig, SchemaRegistryConfig
+from confluent_kafka.schema_registry import SchemaRegistryClient, Schema
+from confluent_kafka.schema_registry.avro import AvroSerializer
 
 
 class KafkaService:
 
     def __init__(self):
+        self.__initialize_kafka()
+        self.__initialize_schema_registry()
+
+    def __initialize_kafka(self):
         kafka_config = KafkaConfig()
         self.kafka_config = {
             'bootstrap.servers': kafka_config.bootstrap_servers
         }
         self.producer = Producer(self.kafka_config)
         self.admin_client = AdminClient(self.kafka_config)
+        self.topic_name_job_request = kafka_config.topic_name_job_request
+        self.__initialize_topic()
 
-    def create_topic(self, topic_name):
+    def __initialize_schema_registry(self):
+        schema_registry_config = SchemaRegistryConfig()
+        self.schema_registry_config = {
+            'url': schema_registry_config.schema_registry_url
+        }
+        self.schema_registry_client = SchemaRegistryClient(self.schema_registry_config)
+
+    def __initialize_topic(self):
         # Check if the topic already exists
         existing_topics = self.admin_client.list_topics().topics
-        if topic_name in existing_topics:
-            raise ValueError(f"Topic {topic_name} already exists")
+        if self.topic_name_job_request in existing_topics:
+            raise ValueError(f"Topic {self.topic_name_job_request} already exists")
 
         # Create the new topic
-        new_topic = NewTopic(topic_name, num_partitions=1, replication_factor=1)
+        new_topic = NewTopic(self.topic_name_job_request, num_partitions=1, replication_factor=1)
         fs = self.admin_client.create_topics([new_topic])
 
         for topic, f in fs.items():
@@ -30,10 +45,21 @@ class KafkaService:
             except KafkaError as e:
                 raise RuntimeError(f"Failed to create topic {topic}: {e}")
 
-    def send_message(self, topic_name, message):
-        self.producer.produce(topic_name, message.encode('utf-8'))
-        self.producer.flush()
-        print(f"Message '{message}' sent to topic '{topic_name}'")
+
+    def __create_job_message(self, job):
+        with open(f"../../../schema_registry/job_config.avsc") as f:
+            schema_str = f.read()
+
+        schema = Schema(schema_str, 'AVRO')
+        self.schema_registry_client.register_schema(f"job_config", schema)
+        avro_serializer = AvroSerializer(schema_registry_client=self.schema_registry_client, schema_str=schema_str)
+        serialized_message = avro_serializer(job, None)
+        return serialized_message
+
+    def send_job(self, job):
+        serialized_message = self.__create_job_message(job)
+        self.producer.produce(self.topic_name_job_request, serialized_message)
+
 
     def consume_messages(self, topic, group_id, process_message):
         consumer_config = {

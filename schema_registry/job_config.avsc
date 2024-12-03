@@ -1,0 +1,97 @@
+{
+  "type": "record",
+  "name": "JobData",
+  "fields": [
+    {"name": "data_type", "type": "string"},
+    {"name": "topic", "type": "string"},
+    {"name": "operation", "type": "string"},
+    {"name": "container_image_name", "type": "string"},
+    {
+      "name": "container_registry",
+      "type": {
+        "type": "record",
+        "name": "ContainerRegistry",
+        "fields": [
+          {"name": "url", "type": "string"},
+          {"name": "type", "type": "string"},
+          {
+            "name": "user_credentials",
+            "type": {
+              "type": "record",
+              "name": "UserCredentials",
+              "fields": [
+                {"name": "username", "type": ["null", "string"], "default": null},
+                {"name": "password", "type": ["null", "string"], "default": null},
+                {"name": "token", "type": ["null", "string"], "default": null}
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {"name": "computation_duration_in_seconds", "type": "int"},
+    {
+      "name": "resource_limits",
+      "type": {
+        "type": "record",
+        "name": "ResourceLimits",
+        "fields": [
+          {"name": "cpu", "type": "float"}, // TODO: Is this the right type?
+          {"name": "memory", "type": "string"}
+        ]
+      }
+    },
+    {
+      "name": "retry_policy",
+      "type": {
+        "type": "record",
+        "name": "RetryPolicy",
+        "fields": [
+          {"name": "retry_on_failure", "type": "boolean"},
+          {"name": "number_of_retries", "type": "int"},
+          {"name": "backoff_period_in_ms", "type": "int"}
+        ]
+      }
+    },
+    {
+      "name": "ports",
+      "type": {
+        "type": "record",
+        "name": "Ports",
+        "fields": [
+          {"name": "host_port", "type": "int"},
+          {"name": "container_port", "type": "int"}
+        ]
+      }
+    },
+    {
+      "name": "environment_variables",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "EnvironmentVariable",
+          "fields": [
+            {"name": "name", "type": "string"},
+            {"name": "value", "type": "string"}
+          ]
+        }
+      }
+    },
+    {
+      "name": "metadata",
+      "type": {
+        "type": "record",
+        "name": "Metadata",
+        "fields": [
+          {"name": "user", "type": "string"},
+          {"name": "job_id", "type": "string"},
+          {"name": "created_at", "type": "string"},
+          {"name": "requested_at", "type": "string"},
+          {"name": "run_at", "type": "string"},
+          {"name": "description", "type": "string"}
+        ]
+      }
+    }
+  ]
+}

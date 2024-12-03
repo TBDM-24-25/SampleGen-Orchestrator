@@ -17,11 +17,11 @@ This project implements a Kafka service and a schema service for managing topics
 1. Install Python version 3.13 or later
 2. Set the following enviroment variables:
   ```bash
-KAFKA_BOOTSTRAP_SERVERS=localhost:<address to your Kafka server>
+  KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 ```
 3. Install the dependencies
 ```bash
-pip install -r requirements.txt
+  pip install -r requirements.txt
 ```
 
 ## Kafka Cluster
@@ -30,12 +30,12 @@ The application requires a Kafka cluster. For developers, Docker in combination 
 1. Go to the root directory of the project.
 2. Run the following command in your shell:
 ```bash
-cd kafka && docker-compose up -d
+  cd kafka && docker-compose up -d
 ```
 
 The cluster might take a few seconds to be deployed.
 
 To stop the cluster, run the following Docker Compose command in your shell:
 ```bash
-docker-compose down
+  docker-compose down
 ```

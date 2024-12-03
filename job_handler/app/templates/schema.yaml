@@ -1,6 +1,7 @@
 # If no image is provided, the job will be executed with a default image for this data type.
 data_type: {{ data_type }}
 topic: {{ topic }}
+operation: {{ operation }}
 # No need for Kafka host/port here
 # The job handler will use the Kafka host/port from the configuration file
 container_image_name: "{{ container_image_name }}"

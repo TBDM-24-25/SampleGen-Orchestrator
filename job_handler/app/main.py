@@ -1,11 +1,12 @@
-
-from jinja2 import Environment, FileSystemLoader
+from services.kafka_service import KafkaService
+from services.schema_service import SchemaService
 
 
 # Mock data
 data = {
     "data_type": "temperature",
     "topic": "temperature",
+    "operation": "create",
     "container_image_name": "temperature-simulator",
     "container_registry": {
         "url": "gcr.io/my-project/temperature-simulator:latest",
@@ -13,7 +14,7 @@ data = {
         "user_credentials": {
             "username": "username",
             "password": "password",
-            "token": "token"
+            "token": None
         }
     },
     "computation_duration_in_seconds": 3600,
@@ -44,22 +45,28 @@ data = {
     }
 }
 
-# Render the template
-def render_template(data):
-    environment = Environment(loader=FileSystemLoader("templates/"))
-    template = environment.get_template("schema.yaml")
-
-    filename = "test_schema.yaml"
-    content = template.render(
-        data
-    )
-    with open(filename, mode="w", encoding="utf-8") as test_schema:
-        test_schema.write(content)
-        print(f"... wrote {filename}")
-
 
 def main():
-    render_template(data)
+    kafka_service = KafkaService()
+    schema_service = SchemaService()
+    schema = schema_service.create_schema(data=data)
+
+    topic_name = 'my_topic5'
+    try:
+        kafka_service.create_topic(topic_name)
+    except ValueError as e:
+        print(f"Topic already exists: {e}")
+    except RuntimeError as e:
+        print(f"Error creating topic: {e}")
+        return
+
+    try:
+        kafka_service.send_message(topic_name, schema)
+    except RuntimeError as e:
+        print(f"Error sending message: {e}")
+
+    # Consume messages from the topic
+    kafka_service.consume_messages([topic_name], group_id='my_group', process_message=process_message)
 
 if __name__ == "__main__":
     main()

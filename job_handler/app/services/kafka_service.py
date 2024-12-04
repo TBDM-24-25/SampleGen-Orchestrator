@@ -1,17 +1,22 @@
 from confluent_kafka import Producer, KafkaError, Consumer, Message
 from confluent_kafka.admin import AdminClient, NewTopic
-from config import KafkaConfig, SchemaRegistryConfig
-from confluent_kafka.schema_registry import SchemaRegistryClient, Schema
-from confluent_kafka.schema_registry.avro import AvroSerializer
+from confluent_kafka.serialization import SerializationContext, MessageField
+
+from config import KafkaConfig
+from confluent_kafka.schema_registry.avro import AvroSerializer, AvroDeserializer
+
+from models import Job
+from services.schema_registry_service import SchemaRegistryService
 
 
 class KafkaService:
 
     def __init__(self):
-        self.__initialize_kafka()
-        self.__initialize_schema_registry()
+        self.__initialize_kafka_client()
+        self.__create_topic()
+        self.schema_registry_service = SchemaRegistryService()
 
-    def __initialize_kafka(self):
+    def __initialize_kafka_client(self):
         kafka_config = KafkaConfig()
         self.kafka_config = {
             'bootstrap.servers': kafka_config.bootstrap_servers
@@ -19,16 +24,8 @@ class KafkaService:
         self.producer = Producer(self.kafka_config)
         self.admin_client = AdminClient(self.kafka_config)
         self.topic_name_job_request = kafka_config.topic_name_job_request
-        self.__initialize_topic()
 
-    def __initialize_schema_registry(self):
-        schema_registry_config = SchemaRegistryConfig()
-        self.schema_registry_config = {
-            'url': schema_registry_config.schema_registry_url
-        }
-        self.schema_registry_client = SchemaRegistryClient(self.schema_registry_config)
-
-    def __initialize_topic(self):
+    def __create_topic(self):
         # Check if the topic already exists
         existing_topics = self.admin_client.list_topics().topics
         if self.topic_name_job_request in existing_topics:
@@ -47,29 +44,36 @@ class KafkaService:
                 raise RuntimeError(f"Failed to create topic {topic}: {e}")
 
 
-    def __create_job_message(self, job):
-        with open(f"../../schema_registry/job_config.avsc") as f:
-            schema_str = f.read()
-
-        schema = Schema(schema_str, 'AVRO')
-        self.schema_registry_client.register_schema(f"job_config", schema)
-        avro_serializer = AvroSerializer(schema_registry_client=self.schema_registry_client, schema_str=schema_str)
-        serialized_message = avro_serializer(job, None)
+    def __create_job_message(self, job: Job):
+        latest_schema_version, schema_registry_client = self.schema_registry_service.get_schema_and_registry_client()
+        avro_serializer = AvroSerializer(schema_str=latest_schema_version.schema_str,
+                                         schema_registry_client=schema_registry_client,
+                                         conf={
+                                              'auto.register.schemas': False
+                                            }
+                                         )
+        serialization_context = SerializationContext(self.topic_name_job_request, MessageField.VALUE)
+        serialized_message = avro_serializer(job.model_dump(), serialization_context)
         return serialized_message
 
-    def send_job(self, job):
+    def send_job(self, job: Job):
         serialized_message = self.__create_job_message(job)
         self.producer.produce(self.topic_name_job_request, serialized_message)
 
 
-    def consume_messages(self, topic, group_id, process_message):
+    def consume_messages(self, group_id, process_message):
+        latest_schema, schema_registry_client = self.schema_registry_service.get_schema_and_registry_client()
+        avro_deserializer = AvroDeserializer(
+            schema_registry_client=schema_registry_client,
+            schema_str=latest_schema.schema_str,
+        )
         consumer_config = {
             'bootstrap.servers': self.kafka_config['bootstrap.servers'],
             'group.id': group_id,
             'auto.offset.reset': 'earliest'
         }
         consumer = Consumer(consumer_config)
-        consumer.subscribe(topic)
+        consumer.subscribe([self.topic_name_job_request])
 
         try:
             while True:
@@ -83,8 +87,9 @@ class KafkaService:
                     elif msg.error():
                         raise KafkaError(msg.error())
                 else:
-                    # Process the message
-                    process_message(msg)
+                    job_dictionary = avro_deserializer(msg.value(), SerializationContext(msg.topic(), MessageField.VALUE))
+                    job = Job.model_validate(job_dictionary)
+                    process_message(job)
         except KeyboardInterrupt:
             print("Consumer interrupted")
         finally:

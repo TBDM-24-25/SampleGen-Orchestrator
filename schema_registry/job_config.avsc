@@ -36,7 +36,7 @@
         "type": "record",
         "name": "ResourceLimits",
         "fields": [
-          {"name": "cpu", "type": "float"}, // TODO: Is this the right type?
+          {"name": "cpu", "type": "float"},
           {"name": "memory", "type": "string"}
         ]
       }

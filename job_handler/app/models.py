@@ -1,20 +1,7 @@
-from datetime import datetime
 from pydantic import BaseModel, model_validator
 from typing import List, Optional
 
 
-class Job(BaseModel):
-    id: int
-    schema: str
-    data_type: str
-    topic: str
-    user: str
-    status: str
-    created_at: datetime
-    updated_at: datetime
-    
-
-# Schema models
 class UserCredentials(BaseModel):
     token: Optional[str]
     username: Optional[str]
@@ -58,7 +45,7 @@ class Metadata(BaseModel):
     run_at: str
     description: str
 
-class SchemaData(BaseModel):
+class Job(BaseModel):
     data_type: str
     topic: str
     operation: str

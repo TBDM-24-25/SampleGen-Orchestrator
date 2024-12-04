@@ -44,7 +44,7 @@ class KafkaService:
                 raise RuntimeError(f"Failed to create topic {topic}: {e}")
 
 
-    def __create_job_message(self, job: Job):
+    def __serialize_message(self, job: Job):
         latest_schema_version, schema_registry_client = self.schema_registry_service.get_schema_and_registry_client()
         avro_serializer = AvroSerializer(schema_str=latest_schema_version.schema_str,
                                          schema_registry_client=schema_registry_client,
@@ -56,17 +56,22 @@ class KafkaService:
         serialized_message = avro_serializer(job.model_dump(), serialization_context)
         return serialized_message
 
+    def __deserialize_message(self, message: Message) -> Job:
+        latest_schema_version, schema_registry_client = self.schema_registry_service.get_schema_and_registry_client()
+        avro_deserializer = AvroDeserializer(
+            schema_registry_client=schema_registry_client,
+            schema_str=latest_schema_version.schema_str,
+        )
+        job_dictionary = avro_deserializer(message.value(), SerializationContext(message.topic(), MessageField.VALUE))
+        job = Job.model_validate(job_dictionary)
+        return job
+
     def send_job(self, job: Job):
-        serialized_message = self.__create_job_message(job)
+        serialized_message = self.__serialize_message(job)
         self.producer.produce(self.topic_name_job_request, serialized_message)
 
 
     def consume_messages(self, group_id, process_message):
-        latest_schema, schema_registry_client = self.schema_registry_service.get_schema_and_registry_client()
-        avro_deserializer = AvroDeserializer(
-            schema_registry_client=schema_registry_client,
-            schema_str=latest_schema.schema_str,
-        )
         consumer_config = {
             'bootstrap.servers': self.kafka_config['bootstrap.servers'],
             'group.id': group_id,
@@ -87,8 +92,7 @@ class KafkaService:
                     elif msg.error():
                         raise KafkaError(msg.error())
                 else:
-                    job_dictionary = avro_deserializer(msg.value(), SerializationContext(msg.topic(), MessageField.VALUE))
-                    job = Job.model_validate(job_dictionary)
+                    job = self.__deserialize_message(msg)
                     process_message(job)
         except KeyboardInterrupt:
             print("Consumer interrupted")

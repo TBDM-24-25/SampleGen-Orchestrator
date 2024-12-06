@@ -1,13 +1,12 @@
-from services.kafka_service import KafkaService
-from services.schema_service import SchemaService
-
+from orchestrator.services.kafka_service import KafkaService
 
 # Mock data
 data = {
-    "data_type": "temperature",
     "topic": "temperature",
+    # either create or delete, rerun = create
     "operation": "create",
-    "container_image_name": "temperature-simulator",
+    "container_image_name": "nginx",
+    # TODO - @leandro, @frederico, @christian, how far should we go when it comes to registry handling?
     "container_registry": {
         "url": "gcr.io/my-project/temperature-simulator:latest",
         "type": "private",
@@ -27,17 +26,13 @@ data = {
         "number_of_retries": 3,
         "backoff_period_in_ms": 10
     },
-    "ports": {
-        "host_port": 8080,
-        "container_port": 80
-    },
     "environment_variables": [
         {"name": "PYTHON_VERSION", "value": "3.7"},
         {"name": "SPARK_VERSION", "value": "3.0.0"}
     ],
     "metadata": {
         "user": "user",
-        "job_id": "job_id",
+        "job_id": "job0001",
         "created_at": "2024-11-27T10:00:00Z",
         "requested_at": "2024-11-27T10:00:00Z",
         "run_at": "2024-11-27T10:00:00Z",
@@ -45,17 +40,10 @@ data = {
     }
 }
 
-
-def process_message(msg):
-    print(f"Received message: {msg.value().decode('utf-8')} from topic: {msg.topic()}")
-
-
 def main():
-    kafka_service = KafkaService()
-    schema_service = SchemaService()
-    schema = schema_service.create_schema(data=data)
+    kafka_service = KafkaService(group_id='status_consumers')
 
-    topic_name = 'my_topic5'
+    topic_name = 'Job_Handling'
     try:
         kafka_service.create_topic(topic_name)
     except ValueError as e:
@@ -65,12 +53,9 @@ def main():
         return
 
     try:
-        kafka_service.send_message(topic_name, schema)
+        kafka_service.send_message(topic_name, data)
     except RuntimeError as e:
         print(f"Error sending message: {e}")
-
-    # Consume messages from the topic
-    kafka_service.consume_messages([topic_name], group_id='my_group', process_message=process_message)
 
 if __name__ == "__main__":
     main()

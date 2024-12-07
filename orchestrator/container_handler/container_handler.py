@@ -2,11 +2,15 @@ import threading
 from queue import Queue
 from time import sleep, time
 import logging
+from getmac import get_mac_address
 
-# TODO - check for proper import
-# pylint: disable=import-error
-# TODO check, what the issue with docker si
+import json
+
+from jinja2 import Environment, FileSystemLoader
+
 import docker
+from docker.errors import DockerException
+
 
 from orchestrator.services.kafka_service import KafkaService
 
@@ -24,12 +28,45 @@ logging.basicConfig(filename='orchestrator/container_handler/logfile.log',
 # initialize KafkaService with group_id Job_Consumers
 kafka_service = KafkaService(group_id='Job_Consumers')
 
-# initialize docker client
-docker_client = docker.client.from_env()
-
 # TODO - should we persist the queue or can we live with it as is?
 # initialize coordination queue for jobs, FIFO, thread-safe
 job_queue = Queue()
+
+# agent_id based on the MAC address of host machine
+agent_id = get_mac_address()
+
+# provide jinja2 environment
+environment = Environment(loader=FileSystemLoader("templates/"))
+# make function time accessible to jinja2 environment. Within template, get_timestamp() can be used
+# reference to function time is handed over
+environment.globals["get_timestamp"] = time
+# make agent_id accessible to jinja2 environment, as used in every template
+environment.globals["agent_id"] = agent_id
+
+# initialize docker client with None
+docker_client = None
+
+def initialize_docker_client():
+    '''
+    The function attempts to initialize a docker client using the environment configuration.
+    If successful, assigns the client to the global variable docker_client. 
+    If the initialization fails, the DockerException is propagated to allow the caller
+    to handle it.
+        Parameters:
+            None
+        Returns:
+            None
+        Raises
+            DockerException: If initialization of the Docker client fails
+    
+    '''
+    global docker_client
+    try:
+        docker_client = docker.client.from_env() 
+    except DockerException:
+        docker_client = None
+        # reraise DockerException that agent observer can handle exception
+        raise
 
 def message_handler(message: dict) -> None:
     '''
@@ -63,12 +100,14 @@ def handle_containers():
     # initializing list to manage (keeping track of) handled job instructions
     handled_job_instructions = []
 
+    job_template = environment.get_template('container_handler/job_status.json.j2')
+
     while True:
         if job_queue.empty():
             logger.info('Currently, there are no new Job Instructions to handle')
 
         # If job_queue consists of Elements, handle Job Instructions
-        # TODO - handle create and delete job instruction
+        # TODO - handle create and delete job instruction define with @leandro
         else:
             # fetch latest element from job_queue
             job_instruction = job_queue.get()
@@ -83,32 +122,27 @@ def handle_containers():
             container_id = container.attrs.get('Id')
             logger.info('Job Instruction for Job ID %s successfully handled, container created with ID: %s', job_id, container_id)
 
-            created_at = time()
+            rendered_content = job_template.render(
+                operation='create',
+                state='successful',
+                container_image_name=container_image_name,
+                container_id=container_id,
+                job_id=job_id
+            )
+            content = json.loads(rendered_content)
 
-            # TODO - provide template
-            data_container_operation = {
-            "operation": "create",
-            # TODO - how to handle errors?
-            # if handled, successful / unsucessful possible
-            "state": "successful",
-            "container_image_name": container_image_name,
-            "container_id": container_id,
-            "metadata": {
-                "job_id": job_id,
-                # TODO - define ID of Handler, also necessary for
-                "container_handler": "handler01",
-                "timestamp": created_at,
-                }
-            }
-
-            kafka_service.send_message('Job_Status', data_container_operation)
+            ## hier gerendertes zeugs rein
+            # job-status noch gluabal setzen weil an mehreren orten gebraucht wird
+            kafka_service.send_message('Job_Status', content)
 
             # TODO - persist?
             handled_job_instructions.append({'job_id': job_id,
                                              'time_to_live': 60,
                                              'container_image_name': container_image_name,
                                              'container_id': container_id, 
-                                             'timestamp': created_at})
+                                             # TODO - das hier ist leicht anders als das was ich im rendering mache
+                                             # problemantisch? ignorieren?
+                                             'timestamp': time()})
 
         # initializing list to filter jobs which should still be tracked
         filtered_list = []
@@ -124,37 +158,89 @@ def handle_containers():
                 container = docker_client.containers.get(handled_job_instruction.get('container_id'))
                 container.kill()
 
-                # TODO - provide template, gleiches wie oben!
-                data_container_operation = {
-                "operation": "stop",
-                # successful / unsuccessful
-                "state": "successful",
-                "container_image_name": 'just a test',
-                "container_id": 'just a test',
-                "metadata": {
-                    "job_id": 'just a test id',
-                    "container_handler": "handler01",
-                    "timestamp": time(),
-                    }
-                }
+                rendered_content = job_template.render(
+                    operation='delete',
+                    state='successful',
+                    container_image_name=container_image_name,
+                    container_id=container_id,
+                    job_id=job_id
+                )
 
-                kafka_service.send_message('Job_status', data_container_operation)
+                content = json.loads(rendered_content)
+
+
+                kafka_service.send_message('Job_Status', content)
+
         # replace old list with updated list
         handled_job_instructions = filtered_list
 
         sleep(5)
 
 # TODO - implement heartbeat agent
+# TODO - Kafka integrieren??
 def observe_agent():
-    pass
+    global docker_client
+
+    heartbeat_template = environment.get_template("container_handler/heartbeat.json.j2")
+    while True:
+        try:
+            if docker_client is None:
+                initialize_docker_client()
+                # if initialization fails, DockerException is thrown
+            if docker_client:
+                # check, if info can be fetched to make sure, docker client has access to docker daemon
+                # if fetch fails, Exception
+                docker_client.info()
+
+                # return successful heartbeat
+                rendered_content = heartbeat_template.render(
+                    state="successful"
+                )
+                print(rendered_content)
+                # parse JSON string, returned by render()
+                content = json.loads(rendered_content)
+
+                kafka_service.send_message('Agent_Status', content)
+
+        except (DockerException, Exception):
+            # return unsuccessful heartbeat
+            rendered_content = heartbeat_template.render(
+                state="unsuccessful"
+            )
+            # parse JSON string, returned by render()
+            content = json.loads(rendered_content)
+
+            kafka_service.send_message('Agent_Status', content)
+    
+        # perform healthcheck every 2 seconds
+        # TODO - can also be another interval
+        sleep(10)
 
 def main():
     # TODO checking if better way to manage threads
     t1 = threading.Thread(target=consume_job_messages)
     t2 = threading.Thread(target=handle_containers)
+    t3 = threading.Thread(target=observe_agent)
+
+    t3.start()
+
     t1.start()
     t2.start()
+
+    # try except finally hier?
+
+    # irgendwie sicherstellen dann beim abschalten ein done kommt, und dass t3 quasi als erstes laufen muss
+    # udn dann alles andere, preflight check!
+
+    # wenn es ein problem gibt einfach nicht mehr konsumieren?? das könnte man auch machen, etc. 
+    # lenadro reporten, wie viele container hier laufen? 
+    # wie viel noch laufen kann? etc. etc. etc. 
 
 
 if __name__ == '__main__':
     main()
+
+
+
+
+

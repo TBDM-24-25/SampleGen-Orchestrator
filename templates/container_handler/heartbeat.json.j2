@@ -1,0 +1,8 @@
+{
+"operation": "heartbeat",
+"state": "{{ state }}", {# either successful or unsucessful #}
+"metadata": {
+    "agent_id": "{{ agent_id }}", {# set globally, callable in template #}
+    "timestamp": "{{ get_timestamp() }}" {# set globally, callable in template #}
+    }
+}

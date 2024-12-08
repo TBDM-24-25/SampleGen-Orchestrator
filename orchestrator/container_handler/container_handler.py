@@ -13,17 +13,12 @@ from docker.errors import DockerException
 
 
 from orchestrator.services.kafka_service import KafkaService
+from orchestrator.services.logger_service import GlobalLogger
 
 # TODO - remove all print statements in the end
 
 # initialize logger
-logger = logging.getLogger('container_handler')
-logging.basicConfig(filename='orchestrator/container_handler/logfile.log',
-                    filemode='w',
-                    encoding='utf-8',
-                    level=logging.INFO,
-                    format='%(asctime)s %(levelname)s %(module)s - %(funcName)s: %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S')
+logger = GlobalLogger(filename='orchestrator/container_handler/logfile.log').get_logger()
 
 # initialize KafkaService with group_id Job_Consumers
 kafka_service = KafkaService(group_id='Job_Consumers')

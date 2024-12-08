@@ -87,4 +87,5 @@ services:
     volumes:
     - ./initialize.py:/tmp/initialize.py
     working_dir: /tmp
+    # set -e to make sure that in the case of an error, exit
     entrypoint: ['sh', '-c', 'set -e; pip install confluent-kafka && python initialize.py']

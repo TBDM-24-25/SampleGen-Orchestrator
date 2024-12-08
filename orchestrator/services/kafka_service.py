@@ -4,21 +4,27 @@ from confluent_kafka.admin import AdminClient, NewTopic
 
 from orchestrator.services.config import KafkaConfig
 
+from typing import Optional
+
 class KafkaService:
 
-    def __init__(self, group_id: str):
+    # group_id, is optional, either str or None
+    def __init__(self, group_id: Optional[str] = None):
         kafka_config = KafkaConfig()
         self.kafka_base_config = {
             'bootstrap.servers': kafka_config.bootstrap_servers
         }
 
         self.kafka_consumer_config = {
-            'group.id': group_id,
             # earliest resets the offset to the earliest (oldest) offset
             'auto.offset.reset': 'earliest',
             # disable auto commit to have self-control over offset commit
             'enable.auto.commit': False
             }
+        
+        if group_id:
+            # if a group_id is provided, append it to the kafka_consumer_config
+            self.kafka_consumer_config['group.id'] = group_id
 
         self.kafka_producer = Producer(self.kafka_base_config)
         # merging kafka_base_config dictionary with kafka_consumer_config dictionary

@@ -33,6 +33,8 @@ As the Job Handler and the Container Handler (Agent) take on a crucial role with
 
 ### 2.3) Container Handler
 
+![image](docs/images/container_handler.png)
+*Figure 02: Architecture Overview Container Handler (Agent)*
 
 
 ### 2.4) Technologies used
@@ -115,6 +117,8 @@ run locally, usage, further improvements
 ## 4) Outlook
 - hier sagen dass man alles noch paketieren könnte, vor allem agent und so, damit man alles schöner laufen lassen kann und auch nutzen kann
 - evtl noch differenzierteres exception handling, etc. 
+
+- sagen, dass man den agent containerisieren muss, auch wegen dependencies, etc. 
 
 architecture
 

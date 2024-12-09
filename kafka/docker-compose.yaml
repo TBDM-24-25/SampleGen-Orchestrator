@@ -1,5 +1,3 @@
-version: '3.4'
-
 services:
   kafka:
     container_name: kafka
@@ -10,14 +8,12 @@ services:
       # Broker configuration see https://kafka.apache.org/documentation/#brokerconfigs
       # configuration of listeners (list of URLs to listen on) including listener names
       # 9092 for host communication, 9093 for internal docker network communication
-      KAFKA_LISTENERS: CONTROLLER://localhost:9091,HOST://0.0.0.0:9092,DOCKER://0.0.0.0:9093
+      KAFKA_LISTENERS: CONTROLLER://0.0.0.0:9091,HOST://0.0.0.0:9092,DOCKER://0.0.0.0:9093
       # listeners to publish for clients to use
       KAFKA_ADVERTISED_LISTENERS: HOST://localhost:9092,DOCKER://kafka:9093
       # mapping between listener names and security protocols
       # PLAINTEXT protocol, standard protocol, for unencrypted traffic
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,DOCKER:PLAINTEXT,HOST:PLAINTEXT
-
-      # Settings required for KRaft mode
       # broker id for this server
       KAFKA_NODE_ID: 1
       # roles, that process plays,
@@ -25,11 +21,9 @@ services:
       # names of listener used by the controller
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       # mapping of id@host:port form the set of voters
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9091
-
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9091
       # listener to use for broker-to-broker communication
       KAFKA_INTER_BROKER_LISTENER_NAME: DOCKER
-
       # required for a single node cluster
       # replication factor for the offsets topic, internal topic (set higher to ensure availability)
       # Internal topic creation will fail until the cluster size meets this replication factor requirement
@@ -39,19 +33,12 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       # minimum number of replicas that must acknowledge a write to transaction topic in order to be considered successful
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-
-      # default number of log partitions per topic
-      KAFKA_NUM_PARTITIONS: 3
-    healthcheck:
-      # check, if kafka is reachable, port 9093 for docker network
-      test: ['CMD-SHELL', 'nc -z kafka 9093']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      # default number of partitions per topic
+      KAFKA_NUM_PARTITIONS: 1
 
   kafka-ui:
-    image: ghcr.io/kafbat/kafka-ui:latest
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
     ports:
     - 8080:8080
     environment:
@@ -64,28 +51,30 @@ services:
     depends_on:
     # making sure, kafka service has started bevore starting kafka-ui service
     - kafka
-  
+
   schema-registry:
-    image: docker.io/bitnami/schema-registry:latest
+    image: confluentinc/cp-schema-registry:latest
+    container_name: schema-registry
     ports:
     - 8081:8081
     environment:
-    # listeners to publish for clients to use
-    - SCHEMA_REGISTRY_LISTENERS=http://0.0.0.0:8081
-    # connection to Kafka cluster via internal docker network, see KAFKA_ADVERTISED_LISTENERS in kafka service 
-    - SCHEMA_REGISTRY_KAFKA_BROKERS=PLAINTEXT://kafka:9093
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      # connection to Kafka cluster via internal docker network, see KAFKA_ADVERTISED_LISTENERS in kafka service 
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9093
+      # listeners to publish for clients to use
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
     depends_on:
     # making sure, kafka service has started bevore starting schema-registry service
-    - kafka  
+    - kafka
 
-  initialize-topics:
-    image: python:3.9-slim
-    depends_on:
-      # as compared to other depends_on, working with newer, more complex structure to allow health checking kafka
-      kafka:
-        condition: service_healthy
+  initializer:
+    image: python:3.13-slim
+    container_name: initializer
     volumes:
     - ./initialize.py:/tmp/initialize.py
     working_dir: /tmp
     # set -e to make sure that in the case of an error, exit
     entrypoint: ['sh', '-c', 'set -e; pip install confluent-kafka && python initialize.py']
+    depends_on:
+    # making sure, kafka service has started bevore starting initializer service
+    - kafka

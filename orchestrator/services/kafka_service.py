@@ -25,30 +25,6 @@ class KafkaService:
         self.kafka_consumer = Consumer(self.kafka_consumer_config | self.kafka_base_config)
         self.kafka_admin_client = AdminClient(self.kafka_base_config)
 
-    def create_topic(self, topic_name):
-        # Check if the topic already exists
-        existing_topics = self.kafka_admin_client.list_topics().topics
-        if topic_name in existing_topics:
-            # TODO - @leandro, raising exception really necessary here, why not simply skip silently?
-            raise ValueError(f"Topic {topic_name} already exists")
-
-        # define and Create the new topic
-        # TODO - @leandro, @frederico, @christian, discuss about replication factor and chose value accordingly
-        # TODO - @leandro, please name
-        new_topic = NewTopic(topic_name, num_partitions=1, replication_factor=1)
-
-        # TODO - @leandro, how about exception handling here? According to the documentation, 
-        # 3 possible exceptions may be raised
-        fs = self.kafka_admin_client.create_topics([new_topic])
-
-        for topic, f in fs.items():
-            try:
-                f.result()
-                print(f"Topic {topic} created")
-            # TODO - @leandro, see create_topics call, there, a KafkaError may be thrown
-            except KafkaError as e:
-                raise RuntimeError(f"Failed to create topic {topic}: {e}")
-
     def send_message(self, topic_name, message):
         # json.dumps(message).encode('utf-8') to serialise into JSON, encoded in utf-8
         self.kafka_producer.produce(topic_name, json.dumps(message).encode('utf-8'))

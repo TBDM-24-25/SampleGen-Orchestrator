@@ -1,11 +1,11 @@
 from orchestrator.services.kafka_service import KafkaService
 
 # Mock data
-data = {
+job_creation_data = {
+    "operation": "delete",
     "topic": "temperature",
-    # either create or delete, rerun = create
-    "operation": "create",
     "container_image_name": "nginx",
+    "number_of_containers": 2,
     # TODO - @leandro, @frederico, @christian, how far should we go when it comes to registry handling?
     "container_registry": {
         "url": "gcr.io/my-project/temperature-simulator:latest",
@@ -16,7 +16,6 @@ data = {
             "token": None
         }
     },
-    "computation_duration_in_seconds": 3600,
     "resource_limits": {
         "cpu": 1.0,
         "memory": "1Gi"
@@ -33,27 +32,31 @@ data = {
     "metadata": {
         "user": "user",
         "job_id": "job0001",
-        "created_at": "2024-11-27T10:00:00Z",
-        "requested_at": "2024-11-27T10:00:00Z",
-        "run_at": "2024-11-27T10:00:00Z",
-        "description": "This job generates temperature data for IoT simulation."
+        # TODO - @ leandro, should we work with the posix timestamp here?
+        "timestamp": "2024-11-27T10:00:00Z",
+        "description": "This job generates temperature data for IoT simulation.",
+        "computation_duration_in_seconds": 3600
     }
 }
 
+job_deletion_data = {
+    "operation": "delete",
+    "metadata": {
+        # TODO - @leandro, should we work with the posix timestamp here?
+        "timestamp": "2024-11-27T10:00:00Z",
+        "container_id": "10e7f47e46eb57e1062509f6eff8b3e81f602edf3cf1f161438f533ef5a408d2",
+        "agent_id": "88:4d:7c:dc:93:0f"
+    }
+}
+
+
 def main():
-    kafka_service = KafkaService(group_id='status_consumers')
+    kafka_service = KafkaService(group_id='job_status_consumers')
 
     topic_name = 'Job_Handling'
-    try:
-        kafka_service.create_topic(topic_name)
-    except ValueError as e:
-        print(f"Topic already exists: {e}")
-    except RuntimeError as e:
-        print(f"Error creating topic: {e}")
-        return
 
     try:
-        kafka_service.send_message(topic_name, data)
+        kafka_service.send_message(topic_name, job_creation_data)
     except RuntimeError as e:
         print(f"Error sending message: {e}")
 

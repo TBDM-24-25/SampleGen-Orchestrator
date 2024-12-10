@@ -1,13 +1,13 @@
-from confluent_kafka.admin import AdminClient, NewTopic
+# pylint: disable=missing-module-docstring
 from time import sleep
 import socket
-import logging
+from confluent_kafka.admin import AdminClient, NewTopic
 
 # using print instead of logging, accepted in this use case, available in stdout
 print('The initialization of Management Topics has started')
 
 management_topics = [
-    {'topic_name': 'Job_Handling', 'num_partitions': 1, 'replication_factor': 1},
+    {'topic_name': 'Job_Instruction', 'num_partitions': 1, 'replication_factor': 1},
     {'topic_name': 'Job_Status', 'num_partitions': 1, 'replication_factor': 1},
     {'topic_name': 'Agent_Status', 'num_partitions': 1, 'replication_factor': 1}
 ]
@@ -20,10 +20,10 @@ topics_to_create = [
     for management_topic in management_topics
 ]
 
-max_retries = 10
-retry_count = 0
+MAX_RETRIES = 10
+RETRY_COUNT = 0
 
-while retry_count < max_retries:
+while RETRY_COUNT < MAX_RETRIES:
     try:
         # AF_INET = address familiy internet, meaning ipv4
         # SOCK_STREAM = connection-oriented communication, meaning TCP
@@ -41,14 +41,17 @@ while retry_count < max_retries:
 
         # break while True loop, jump to final success message
         break
+    # pylint: disable=broad-exception-caught
     except Exception as e:
-        retry_count += 1
+        RETRY_COUNT += 1
         print(f'The Connection Check to Kafka has not succeeded yet: {e}')
         sleep(1)
 
 # final success or failure message
-if retry_count < max_retries:
+if RETRY_COUNT < MAX_RETRIES:
     print('The initialization of Management Topics has been successful')
+
 else:
-    print('The initialization of Management Topics has not been successful, maximum number of retries reached')
+    print('''The initialization of Management Topics has not been successful,
+          maximum number of retries reached''')
     exit(1)

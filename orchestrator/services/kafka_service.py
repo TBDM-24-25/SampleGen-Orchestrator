@@ -1,6 +1,6 @@
 import json
 from confluent_kafka import Producer, Consumer, KafkaError
-from confluent_kafka.admin import AdminClient, NewTopic
+from confluent_kafka.admin import AdminClient
 
 from orchestrator.services.config import KafkaConfig
 
@@ -55,9 +55,7 @@ class KafkaService:
                     # transforming string representation into dictionary, return value
                     message_dict = json.loads(message_decoded)
                     # callback, allowing for individual message processing
-                    message_handler(message_dict)
-                    # commit manually
-                    self.kafka_consumer.commit(message=message)
+                    message_handler(message, message_dict)
         except KeyboardInterrupt:
             print("Consumer interrupted")
         except RuntimeError:

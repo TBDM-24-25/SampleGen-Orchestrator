@@ -2,17 +2,18 @@ import threading
 from time import sleep, time
 import json
 from getmac import get_mac_address
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, Template
 
 import docker
 from docker.errors import DockerException
+# import only necessary for properly describe message_handler()
+from confluent_kafka import Message
 
 from orchestrator.services.kafka_service import KafkaService
 from orchestrator.services.logger_service import GlobalLogger
 
-# TODO - remove all print statements in the end
-# TODO - set kafka publish topic globally?
 
+# TODO - remove all print statements in the end
 
 # initialize logger
 logger = GlobalLogger(filename='orchestrator/container_handler/logfile.log').get_logger()
@@ -56,7 +57,121 @@ def initialize_docker_client():
         # reraise DockerException that agent observer can handle exception
         raise
 
-def message_handler(message: dict) -> None:
+def create_containers(
+        number_of_containers: int,
+        container_image_name: str,
+        job_id: str,
+        job_template: Template,
+        message: Message
+) -> None:
+    
+    # TODO - check resources, create render_and_send() function
+    # TODO - handle empty or invalid input?
+
+    # initialization of list, necessary to store container ID(s)
+    containers_created = []
+
+    for index in range(number_of_containers):
+        logger.info('Starting Container %s/%s with Image %s',
+                     index + 1, number_of_containers, container_image_name)
+        try:
+            # TODO - extract further details from @leandros message to start up containers
+            container = docker_client.containers.run(container_image_name, detach=True)
+            container_id = container.attrs.get('Id')
+
+            logger.info('Container %s/%s with Image %s has been successfully created, Container ID: %s',
+                        index + 1, number_of_containers, container_image_name, container_id)
+            containers_created.append(container_id)
+
+        except Exception as e:
+            rendered_content = job_template.render(
+            operation='create',
+            state='unsuccessful',
+            container_image_name=container_image_name,
+            container_id=None,
+            job_id=job_id)
+            content = json.loads(rendered_content)
+
+            kafka_service.send_message('Job_Status', content)
+            logger.info('Handling of Job Instruction for Job ID %s was not successful due to %s', job_id, e)
+            # terminate for loop early
+            break
+    else:
+    # execute if loop is not terminated early with break
+        rendered_content = job_template.render(
+        operation='create',
+        state='successful',
+        container_image_name=container_image_name,
+        container_id=containers_created,
+        job_id=job_id)
+        content = json.loads(rendered_content)
+
+        kafka_service.send_message('Job_Status', content)
+        logger.info('Handling of Job Instruction for Job ID %s was successful', job_id)
+
+    # no matter if successful or not, message is commited
+    kafka_service.kafka_consumer.commit(message=message)
+
+def delete_containers(
+        number_of_containers: int,
+        container_image_name: str,
+        job_id: str,
+        job_template: Template,
+        message: Message,
+        container_ids: list
+) -> None:
+    
+    # TODO - check resources, create render_and_send() function
+    # TODO - handle empty or invalid input?
+
+    # initialization of list, necessary to store container ID(s)
+    containers_deleted = []
+
+    for container_id in container_ids:
+        index = 0
+        logger.info('Deleting container %s/%s with image %s',
+                     index + 1, number_of_containers, container_image_name)
+        try:
+            # TODO - extract further details from @leandros message to start up containers
+            container = docker_client.containers.get(container_id)
+            container.kill()
+            logger.info('Container %s/%s with Image %s has been successfully stopped, Container ID: %s',
+                        index + 1, number_of_containers, container_image_name, container_id)
+            
+            containers_deleted.append(container_id)
+
+            index += 1
+
+        except Exception as e:
+            rendered_content = job_template.render(
+            operation='delete',
+            state='unsuccessful',
+            container_image_name=container_image_name,
+            container_id=None,
+            job_id=job_id)
+            content = json.loads(rendered_content)
+
+            kafka_service.send_message('Job_Status', content)
+            logger.info('Handling of Job Instruction for Job ID %s was not successful due to %s', job_id, e)
+            # terminate for loop early
+            break
+    else:
+    # execute if loop is not terminated early with break
+        rendered_content = job_template.render(
+        operation='delete',
+        state='successful',
+        container_image_name=container_image_name,
+        container_id=containers_deleted,
+        job_id=job_id)
+        content = json.loads(rendered_content)
+
+        kafka_service.send_message('Job_Status', content)
+        logger.info('Handling of Job Instruction for Job ID %s was successful', job_id)
+
+    # no matter if successful or not, message is commited
+    kafka_service.kafka_consumer.commit(message=message)
+
+def message_handler(message: Message, message_dict: dict) -> None:
     # TODO - to be defined
     '''
     # TODO
@@ -70,90 +185,42 @@ def message_handler(message: dict) -> None:
     job_template = environment.get_template('container_handler/job_status.json.j2')
 
     # TODO - provide a function to extract all values
-    operation = message.get('operation')
-    number_of_containers = message.get('number_of_containers')
-    job_id = message.get('metadata').get('job_id')
-    container_image_name = message.get('container_image_name')
+    # TODO - when delete message, most of them cannot be extracted! only focus here on ones that can be!
+    operation = message_dict.get('operation')
+    number_of_containers = message_dict.get('number_of_containers')
+    job_id = message_dict.get('metadata').get('job_id')
+    container_image_name = message_dict.get('container_image_name')
     logger.info('Handle Job Instruction for Job ID %s - %s', job_id, operation)
 
-    # TODO - check if enough resources are available to handle instructed job
     if operation == 'create':
         logger.info('Start Creation of %s %s Containers', number_of_containers, container_image_name)
+        create_containers(number_of_containers, container_image_name, job_id, job_template, message)
 
-        # initialization of list, necessary to store container ID(s)
-        containers_created = []
 
-        for index in range(number_of_containers):
-            logger.info('Start creating Container with Index %s', index+1)
-            try:
-                # TODO - extract further details from @leandros message to start up containers
-                container = docker_client.containers.run(container_image_name, detach=True)
-                container_id = container.attrs.get('Id')
-
-                logger.info('Container with Index %s has been successfully created, Container ID: %s', index+1, container_id)
-                containers_created.append(container_id)
-
-            except Exception as e:
-                rendered_content = job_template.render(
-                operation='create',
-                state='unsuccessful',
-                container_image_name=container_image_name,
-                container_id=None,
-                job_id=job_id)
-                content = json.loads(rendered_content)
-
-                kafka_service.send_message('Job_Status', content)
-                logger.info('Handling of Job Instruction for Job ID %s was not successful due to %s', job_id, e)
-                # terminate for loop early
-                break
-            else:
-            # execute if no exception
-                rendered_content = job_template.render(
-                operation='create',
-                state='successful',
-                container_image_name=container_image_name,
-                container_id=containers_created,
-                job_id=job_id)
-                content = json.loads(rendered_content)
-
-                kafka_service.send_message('Job_Status', content)
-                logger.info('Handling of Job Instruction for Job ID %s was successful', job_id)
-
-    
     elif operation == 'delete':
-        print('Something to delete!')
-        # check, if agent ID relates to mine, if so, handle job, and commit, otherwise, do not care, do not commit
-        # adjust kafka service to not perform commit after message handler has been called
-#                 container = docker_client.containers.get(handled_job_instruction.get('container_id'))
-#                 container.kill()
+        if message_dict.get('metadata').get('agent_id') == agent_id:
+            delete_containers(number_of_containers, container_image_name,
+                              job_id, job_template, message, message_dict.get('metadata').get('container_id'))
+            print('something I have to handle')
 
-#                 rendered_content = job_template.render(
-#                     operation='delete',
-#                     state='successful',
-#                     container_image_name=container_image_name,
-#                     container_id=container_id,
-#                     job_id=job_id
-#                 )
+        else:
+            print('nothing to do for me')
 
-#                 content = json.loads(rendered_content)
-
-
-#                 kafka_service.send_message('Job_Status', content)
-    
+    # TODO - @leandro such messages should not arrive at my end because of schema validation right?
     else:
         print('I do not understand your job instruction!')
 
 def consume_job_messages() -> None:
     '''
-    The function consumes messages from the Kafka topic Job_Handling and processes
+    The function consumes messages from the Kafka topic Job_Instruction and processes
     incoming message using the message_handler function (callback).
         Parameters:
             None
         Returns:
             None
     '''
-    logger.info('Message Consumer for Topic Job_Handling successfully called')
-    topic_name = 'Job_Handling'
+    logger.info('Message Consumer for Topic Job_Instruction successfully called')
+    topic_name = 'Job_Instruction'
     kafka_service.consume_messages(topic=[topic_name], message_handler=message_handler)
 
 # TODO - Finalize heartbeat agent, docker daemon check and resource check

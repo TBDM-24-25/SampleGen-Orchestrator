@@ -35,6 +35,8 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       # default number of partitions per topic
       KAFKA_NUM_PARTITIONS: 1
+    volumes:
+    - ./kafka-data:/tmp/kafka-logs
 
   kafka-ui:
     container_name: kafka-ui

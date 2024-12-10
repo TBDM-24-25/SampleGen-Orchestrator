@@ -2,7 +2,7 @@ from orchestrator.services.kafka_service import KafkaService
 
 # Mock data
 job_creation_data = {
-    "operation": "delete",
+    "operation": "create",
     "topic": "temperature",
     "container_image_name": "nginx",
     "number_of_containers": 2,
@@ -41,10 +41,13 @@ job_creation_data = {
 
 job_deletion_data = {
     "operation": "delete",
+    "container_image_name": "nginx",
+    "number_of_containers": 2,
     "metadata": {
+        "job_id": "job0001",
         # TODO - @leandro, should we work with the posix timestamp here?
         "timestamp": "2024-11-27T10:00:00Z",
-        "container_id": "10e7f47e46eb57e1062509f6eff8b3e81f602edf3cf1f161438f533ef5a408d2",
+        "container_id": ["8df66865532f841a19bebd9c97bcf1f8cf688a15e517fbe492114f749a991494", "883678dc169f9cffc434a1859958421899735b245d47f4cb3b5c2d91399533b4"],
         "agent_id": "88:4d:7c:dc:93:0f"
     }
 }
@@ -53,10 +56,10 @@ job_deletion_data = {
 def main():
     kafka_service = KafkaService(group_id='job_status_consumers')
 
-    topic_name = 'Job_Handling'
+    topic_name = 'Job_Instruction'
 
     try:
-        kafka_service.send_message(topic_name, job_creation_data)
+        kafka_service.send_message(topic_name, job_deletion_data)
     except RuntimeError as e:
         print(f"Error sending message: {e}")
 

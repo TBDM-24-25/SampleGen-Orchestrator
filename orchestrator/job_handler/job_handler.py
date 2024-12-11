@@ -18,17 +18,13 @@ job_creation_data = {
     },
     "resource_limits": {
         "cpu": 1.0,
-        "memory": "1Gi"
+        # memory limits, string, with unit identifier such as b, k, m, g
+        "memory": "1g"
     },
-    "retry_policy": {
-        "retry_on_failure": True,
-        "number_of_retries": 3,
-        "backoff_period_in_ms": 10
+    "environment_variables": {
+        "PYTHON_VERSION": "3.7",
+        "SPARK_VERSION": "3.0.0"
     },
-    "environment_variables": [
-        {"name": "PYTHON_VERSION", "value": "3.7"},
-        {"name": "SPARK_VERSION", "value": "3.0.0"}
-    ],
     "metadata": {
         "user": "user",
         "job_id": "job0001",
@@ -47,7 +43,7 @@ job_deletion_data = {
         "job_id": "job0001",
         # TODO - @leandro, should we work with the posix timestamp here?
         "timestamp": "2024-11-27T10:00:00Z",
-        "container_id": ["8df66865532f841a19bebd9c97bcf1f8cf688a15e517fbe492114f749a991494", "883678dc169f9cffc434a1859958421899735b245d47f4cb3b5c2d91399533b4"],
+        "container_id": ["737e86cf56f54eb8e8f455c2838b0e92868a7a00cb69bc6f37150e4a1837d5c7", "b182fb4c1aade0beedb726f0a34e42d0b364ff4ae55d822e0faedff89d90209b"],
         "agent_id": "88:4d:7c:dc:93:0f"
     }
 }
@@ -59,7 +55,7 @@ def main():
     topic_name = 'Job_Instruction'
 
     try:
-        kafka_service.send_message(topic_name, job_deletion_data)
+        kafka_service.send_message(topic_name, job_creation_data)
     except RuntimeError as e:
         print(f"Error sending message: {e}")
 

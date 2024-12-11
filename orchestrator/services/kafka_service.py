@@ -55,7 +55,8 @@ class KafkaService:
                     # transforming string representation into dictionary, return value
                     message_dict = json.loads(message_decoded)
                     # callback, allowing for individual message processing
-                    message_handler(message, message_dict)
+                    message_handler(message_dict)
+                    self.kafka_consumer.commit(message=message)
         except KeyboardInterrupt:
             print("Consumer interrupted")
         except RuntimeError:

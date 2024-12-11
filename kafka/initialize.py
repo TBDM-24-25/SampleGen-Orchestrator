@@ -50,6 +50,8 @@ while RETRY_COUNT < MAX_RETRIES:
 # final success or failure message
 if RETRY_COUNT < MAX_RETRIES:
     print('The initialization of Management Topics has been successful')
+    sleep(1)
+    print(f'Available Topics: {kafka_admin_client.list_topics().topics}')
 
 else:
     print('''The initialization of Management Topics has not been successful,

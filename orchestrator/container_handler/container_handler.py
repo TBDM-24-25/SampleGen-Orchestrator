@@ -14,17 +14,6 @@ from orchestrator.services.avro_service import AvroService
 
 from orchestrator.services.status import Status
 
-# TODO - remove all print statements in the end
-# TODO - @leandro during container creation, check resources?
-# machen
-
-# TODO - @leandro handle empty or invalid input?
-
-# TODO - Finalize heartbeat agent, docker daemon check and resource check
-
-# TODO - @leandro report number of containers/container ids really necessary?
-# evtl sinnvoll, 
-
 # initialize logger
 logger = GlobalLogger(filename='orchestrator/container_handler/logfile.log', logger_name='container_handler_logger').get_logger()
 
@@ -46,22 +35,21 @@ environment.globals["agent_id"] = agent_id
 docker_client = None
 
 # heartbeat check interval
-check_interval = 10
+check_interval = 30
 
-
-
+# initialize schema registry client
 sr_client = SchemaRegistryService().get_client()
 
-with open("schemas/job_status.avsc", 'r') as f:
-    job_status_schema_str = f.read()
+# fetch job_status Avro schema
+with open("schemas/job_status.avsc", 'r') as jsf, open('schemas/job_instruction.avsc', 'r') as jis, open('schemas/heartbeat.avsc', 'r') as hs:
+    job_status_schema_str = jsf.read()
+    job_instruction_schema_str = jis.read()
+    heartbeat_schema_str = hs.read()
 
+# initialize respective serializers/deserializers
 job_status_avro_serializer = AvroService(sr_client, job_status_schema_str).get_avro_serializer()
-
-with open('schemas/job_instruction.avsc', 'r') as f:
-    job_instruction_schema_str = f.read()
-
+heartbeat_serializer = AvroService(sr_client, heartbeat_schema_str).get_avro_serializer()
 job_instruction_avro_deserializer = AvroService(sr_client, job_instruction_schema_str).get_avro_deserializer()
-
 
 def initialize_docker_client():
     '''
@@ -141,12 +129,6 @@ def extract_container_ids(message_dict: dict) -> list:
     '''
     return message_dict.get('metadata').get('container_id')
 
-
-
-
-
-
-
 def render_job_template_and_produce_job_status_message(
         operation: str,
         status: Status,
@@ -180,13 +162,14 @@ def render_job_template_and_produce_job_status_message(
 
     kafka_service.send_message('Job_Status', content, job_status_avro_serializer)
 
-def render_heartbeat_template_and_produce_agent_status_message(status: Status, failed_checks: list) -> None:
+def render_heartbeat_template_and_produce_agent_status_message(status: Status, failed_checks: list, containers_running: list) -> None:
     '''
-    The function renders a heartbead template and 
+    The function renders a heartbeat template and 
     sends a agent status message to Kafka.
         Parameters:
             status (Status): The status of the heartbeat (e.g., Status.SUCCESS, Status.FAILURE)
             failed_checks (list): A list (potentially empty) of checks that failed during the heartbeat
+            containers_running (list): A list of running containers on this Docker daemon
     Returns:
         None
     '''
@@ -195,11 +178,12 @@ def render_heartbeat_template_and_produce_agent_status_message(status: Status, f
 
     rendered_content = heartbeat_template.render(
         status=status.value,
-        failed_checks=failed_checks
+        failed_checks=failed_checks,
+        containers_running=containers_running
     )
     content = json.loads(rendered_content)
 
-    kafka_service.send_message('Agent_Status', content)
+    kafka_service.send_message('Agent_Status', content, heartbeat_serializer)
 
 def create_containers(
         number_of_containers: int,
@@ -342,96 +326,61 @@ def consume_job_messages() -> None:
 def observe_docker_daemon():
     ''''
     The function initializes the Docker client and checks if the connection
-    to the Docker daemon is given.
+    to the Docker daemon is given. Additionally, it reports the container running
+    on the Docker daemon, started by the Samplegen Orchestrator.
         Parameters:
             None
         Returns:
             Status: Status.SUCCESS if the Docker client is functional,
                     Status.FAILURE otherwise
     '''
+    container_id_running_containers = []
     global docker_client
     try:
         if docker_client is None:
             initialize_docker_client()
             # if initialization fails, DockerException is thrown
-        if docker_client:
-            # check, if info can be fetched to make sure, docker client has access to docker daemon
-            # if fetch fails, Exception
-            docker_client.info()
+        if docker_client: 
+            # two checks with one command:
+            # 1) making sure, docker client has access to docker daemon
+            # 2) report running containers
+            # only return containers which have been created by sample_gen_orchestrator
+            running_containers = docker_client.containers.list(
+                filters={"label": "sample_gen_orchestrator"}
+                )
+            for running_container in running_containers:
+                container_id_running_containers.append(running_container.id)
 
     except (DockerException, Exception):
         # return failure
-        return Status.FAILURE
+        return Status.FAILURE, container_id_running_containers
 
     else:
         # return success, if try block is executed properly
-        return Status.SUCCESS
+        return Status.SUCCESS, container_id_running_containers
 
-def observe_cpu_availability():
+def observe_agent():
     '''
-    The function observes the overall cpu availability
-    by analyzing the cpu usage of all running containers.
+    The function continuously monitors the status of the Container Handler (Agent),
+    based on predefined checks, and provides a heartbeat.
         Parameters:
             None
         Returns:
-            Status: Status.SUCCESS if total cpu usage is within acceptable limits,
-                    Status.FAILURE otherwise (if total cpu usage exceeds 100%)
+            None
     '''
-    try:
-        overal_cpu_usage = 0
-        for container_instance in docker_client.containers.list():
-            container_statistics = container_instance.stats(decode=False, stream=False)
-
-            # total cpu time (in nanoseconds) that the container has used since it started
-            container_cpu_time_overall = container_statistics['cpu_stats']['cpu_usage']['total_usage']
-            # total cpu time (in nanoseconds) that the container used during previous measurement period
-            container_cpu_time_until_previous_period = container_statistics['precpu_stats']['cpu_usage']['total_usage']
-            # delta represents cpu time (in nanoseconds) that the container used during the previous measurement period
-            container_cpu_delta = container_cpu_time_overall - container_cpu_time_until_previous_period
-
-            # total cpu time (in nanoseconds) that the whole system has used since it started
-            system_cpu_time_overall = container_statistics['cpu_stats']['system_cpu_usage']
-            # total cpu time (in nanoseconds) that the whole system used during previous measurement period
-            system_cpu_time_until_previous_period = container_statistics['precpu_stats']['system_cpu_usage']
-            # delta represents cpu time (in nanoseconds) that the whole system used during the previous measurement period
-            system_cpu_delta = system_cpu_time_overall - system_cpu_time_until_previous_period
-
-            # number of cpu cores available to the Docker daemon
-            online_cpus = container_statistics['cpu_stats']['online_cpus']
-
-            if system_cpu_delta > 0 and online_cpus > 0:
-                cpu_percent = (container_cpu_delta / system_cpu_delta) * online_cpus * 100
-            else:
-                cpu_percent = 0
-
-            overal_cpu_usage += cpu_percent
-        if overal_cpu_usage > 100:
-            # return failure, if no resources are available anymore
-            return Status.FAILURE
-        else:
-            # return success, if still resources are available
-            return Status.SUCCESS
-
-    except Exception:
-        # return failure
-        return Status.FAILURE
-
-# TODO - finalize
-def observe_agent():
     while True:
-        status, failed_checks = checker(docker_client=observe_docker_daemon(),
-                         cpu_availability=observe_cpu_availability(),
+        docker_client_status, container_id_running_containers = observe_docker_daemon()
+        status, failed_checks = checker(docker_client=docker_client_status,
                          check2=Status.SUCCESS,
                          check3=Status.SUCCESS)
 
-        # print(docker_client.containers.list(filters={'label': 'sample_gen_orchestrator'}))
         if status == Status.FAILURE:
-            print('agent hat zurzeit ein Problem')
+            logger.info('The Container Agent has currently some issues: %s', failed_checks)
 
         else:
-            print('agent ist ready')
+            logger.info('The Container Agent is currently running smoothly')
 
-        render_heartbeat_template_and_produce_agent_status_message(status, failed_checks)
+        render_heartbeat_template_and_produce_agent_status_message(status, failed_checks, container_id_running_containers)
         logger.info('The Heartbeat was %s', status.value)
 
         sleep(check_interval)
@@ -453,14 +402,14 @@ def checker(**kwargs):
     for key, value in kwargs.items():
         if value == Status.FAILURE:
             failed_checks.append(key)
-            print(f'The Check {key} failed')
+            logger.info('The Check %s failed', key)
 
     if failed_checks:
-        print(f'The following Checks failed: {failed_checks}')
+        logger.info('The following Checks failed: %s', failed_checks)
         return Status.FAILURE, failed_checks
 
     else:
-        print('All Checks were performed successfully.')
+        logger.info('All Checks were performed successfully.')
         return Status.SUCCESS, failed_checks
 
 def main():

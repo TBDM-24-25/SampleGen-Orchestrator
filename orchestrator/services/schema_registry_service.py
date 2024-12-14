@@ -1,6 +1,5 @@
-from orchestrator.services.config import SchemaRegistryConfig
-
 from confluent_kafka.schema_registry import SchemaRegistryClient
+from orchestrator.services.config import SchemaRegistryConfig
 
 class SchemaRegistryService():
 

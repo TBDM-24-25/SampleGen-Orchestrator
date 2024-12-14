@@ -1,5 +1,5 @@
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
 
 class BaseConfig:
     def __init__(self) -> None:
@@ -15,7 +15,7 @@ class KafkaConfig(BaseConfig):
 
         if not self.bootstrap_servers:
             raise ValueError("KAFKA_BOOTSTRAP_SERVERS environment variable not set")
-     
+
 class SchemaRegistryConfig(BaseConfig):
     def load_environment_variables(self) -> None:
         self.schema_registry_url = os.getenv('SCHEMA_REGISTRY_URL', '')

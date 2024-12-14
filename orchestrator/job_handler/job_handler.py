@@ -31,7 +31,7 @@ job_instruction_data = {
 }
 
 # initialize logger
-logger = GlobalLogger(filename='orchestrator/job_handler/logfile.log', logger_name='job_handler_logger').get_logger()
+logger = GlobalLogger.get_logger()
 
 with open("schemas/job_instruction.avsc", 'r') as f:
     job_instruction_schema_str = f.read()
@@ -40,7 +40,7 @@ schema_registry_client = SchemaRegistryService().get_client()
 job_instruction_avro_serializer = AvroService(schema_registry_client, job_instruction_schema_str).get_avro_serializer()
 
 def main():
-    kafka_service = KafkaService(group_id='job_status_consumers', logger=logger)
+    kafka_service = KafkaService(group_id='job_status_consumers')
 
     topic_name = 'Job_Instruction'
 

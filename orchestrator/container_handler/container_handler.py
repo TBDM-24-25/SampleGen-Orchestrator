@@ -15,10 +15,10 @@ from orchestrator.services.avro_service import AvroService
 from orchestrator.services.status import Status
 
 # initialize logger
-logger = GlobalLogger(filename='orchestrator/container_handler/logfile.log', logger_name='container_handler_logger').get_logger()
+logger = GlobalLogger.get_logger()
 
 # initialize KafkaService with group_id Job_Consumers
-kafka_service = KafkaService(group_id='Job_Consumers', logger=logger)
+kafka_service = KafkaService(group_id='Job_Consumers')
 
 # agent_id based on the MAC address of host machine
 agent_id = get_mac_address()
@@ -306,10 +306,6 @@ def message_handler(message_dict: dict) -> None:
         else:
             logger.info('Deletion Job Instruction relevant to other Agent')
 
-    # TODO - @leandro such messages should not arrive at my end because of schema validation right?
-    else:
-        logger.info('Unknown Job Instruction')
-
 def consume_job_messages() -> None:
     '''
     The function consumes messages from the Kafka topic Job_Instruction and processes
@@ -340,7 +336,7 @@ def observe_docker_daemon():
         if docker_client is None:
             initialize_docker_client()
             # if initialization fails, DockerException is thrown
-        if docker_client: 
+        if docker_client:
             # two checks with one command:
             # 1) making sure, docker client has access to docker daemon
             # 2) report running containers

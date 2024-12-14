@@ -1,39 +1,23 @@
 import logging
 
-
 class GlobalLogger:
     '''
     The class provides a global logger instance.
-
-        Attributes:
-            logger (logging.logger): The global logger instance   
     '''
 
-    def __init__(self, filename: str, logger_name: str, level: int = logging.INFO):
-        '''
-        The function initializes the global logger instance whilst providing some
-        level of customization.
+    # classattribute
+    _logger = None
 
-            Parameters:
-                filename (str): Path to the logfile
-                logger_name (str): Name of the logger
-                level: (int): Log level (e.g. logging.INFO, logging.DEBUG) (default: logging.INFO)
-            Returns:
-                None
-        '''
-        logging.basicConfig(filename=filename,
-                            level=level,
-                            filemode='w',
-                            encoding='utf-8',
-                            format='%(asctime)s %(levelname)s %(module)s - %(funcName)s: %(message)s',
-                            datefmt='%Y-%m-%d %H:%M:%S')
+    @staticmethod
+    def get_logger(filename='logs/app.log', level=logging.INFO, filemode='a') -> logging.Logger:
+        if GlobalLogger._logger is None:
+            logging.basicConfig(filename=filename,
+                                level=level,
+                                filemode=filemode,
+                                encoding='utf-8',
+                                format='%(asctime)s %(levelname)s %(module)s - %(funcName)s: %(message)s',
+                                datefmt='%Y-%m-%d %H:%M:%S')
 
-        self.logger = logging.getLogger(logger_name)
+            GlobalLogger._logger = logging.getLogger('global_logger')
 
-    def get_logger(self) -> logging.Logger:
-        '''
-        The function returns the global logger instance.
-            Returns:
-                logger (logging.Logger): The global logger instance
-        '''
-        return self.logger
+        return GlobalLogger._logger

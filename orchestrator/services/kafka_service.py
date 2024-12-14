@@ -1,5 +1,4 @@
 import json
-from logging import Logger
 from confluent_kafka import Producer, Consumer, KafkaError
 from confluent_kafka.admin import AdminClient
 
@@ -7,10 +6,13 @@ from confluent_kafka.serialization import SerializationContext, MessageField
 from confluent_kafka.schema_registry.avro import AvroSerializer, AvroDeserializer
 
 from orchestrator.services.config import KafkaConfig
+from orchestrator.services.logger_service import GlobalLogger
+
+logger = GlobalLogger.get_logger()
 
 class KafkaService:
 
-    def __init__(self, group_id: str, logger: Logger):
+    def __init__(self, group_id: str):
         kafka_config = KafkaConfig()
         self.kafka_base_config = {
             'bootstrap.servers': kafka_config.bootstrap_servers
@@ -29,8 +31,6 @@ class KafkaService:
         self.kafka_consumer = Consumer(self.kafka_consumer_config | self.kafka_base_config)
         self.kafka_admin_client = AdminClient(self.kafka_base_config)
 
-        self.logger = logger
-
     def send_message(self, topic_name: str, message: dict, avro_serializer: AvroSerializer = None):
         try:        
             if avro_serializer is None:
@@ -40,9 +40,9 @@ class KafkaService:
                 self.kafka_producer.produce(topic=topic_name,
                                             value=avro_serializer(message, SerializationContext(topic_name, MessageField.VALUE)))
             self.kafka_producer.flush()
-            self.logger.info('Message %s produced to Topic %s', message, topic_name)
+            logger.info('Message %s produced to Topic %s', message, topic_name)
         except Exception as e:
-            self.logger.info('Unable to produce Message %s to Topic %s due to %s', message, topic_name, e)
+            logger.info('Unable to produce Message %s to Topic %s due to %s', message, topic_name, e)
 
     def consume_messages(self, topic_names: list, message_handler: callable, avro_deserializer: AvroDeserializer = None) -> dict:
 
@@ -59,7 +59,7 @@ class KafkaService:
                 if message.error():
                     if message.error().code() == KafkaError._PARTITION_EOF:
                         # End of partition event
-                        self.logger.info('''Reached End of Partition for Topic %s} 
+                        logger.info('''Reached End of Partition for Topic %s} 
                                          Partition %s''', message.topic, message.partition)
                     elif message.error():
                         raise KafkaError(message.error())
@@ -74,14 +74,14 @@ class KafkaService:
                         # avro deserializer returns a dict object, representing the message
                         message_dict = avro_deserializer(message.value(), SerializationContext(message.topic(), MessageField.VALUE))
                     
-                    self.logger.info('Message %s consumed from Topic %s', message_dict, topic_names)
+                    logger.info('Message %s consumed from Topic %s', message_dict, topic_names)
                     print('consumed!')
                     # callback, allowing for individual message processing
                     message_handler(message_dict)
                     self.kafka_consumer.commit(message=message)
         except Exception as e:
-            self.logger.info('Unable to consume Message %s from Topic %s due to %s', message, topic_names, e)
+            logger.info('Unable to consume Message %s from Topic %s due to %s', message, topic_names, e)
         except KeyboardInterrupt:
-            self.logger.info('Consumer interrupted')
+            logger.info('Consumer interrupted')
         finally:
             self.kafka_consumer.close()

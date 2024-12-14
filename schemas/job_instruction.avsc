@@ -1,0 +1,93 @@
+{
+  "namespace": "samplegen_orchestrator.avro",
+  "type": "record",
+  "name": "job_instruction",
+  "fields": [
+    {
+      "name": "operation",
+      "type": {
+        "type": "enum",
+        "name": "operation_enum",
+        "symbols": ["create", "delete"]
+      }
+    },
+    {
+      "name": "topic",
+      "type": "string"
+    },
+    {
+      "name": "container_image_name",
+      "type": "string"
+    },
+    {
+      "name": "number_of_containers",
+      "type": "int"
+    },
+    {
+      "name": "resource_limits",
+      "type": {
+        "type": "record",
+        "name": "resource_limits_type",
+        "fields": [
+            {
+                "name": "cpu",
+                "type": "float"
+            },
+            {
+                "name": "memory",
+                "type": "string"
+            }
+        ]
+      }
+    },
+    {
+      "name": "environment_variables",
+      "type": {
+        "type": "map",
+        "values": "string"
+      }
+    },
+    {
+      "name": "metadata",
+      "type": {
+        "type": "record",
+        "name": "metadata_type", 
+        "fields": [
+          {
+              "name": "user",
+              "type": "string"
+          },
+          {
+              "name": "job_id",
+              "type": "string"
+          },
+          {
+              "name": "timestamp",
+              "type": "float"
+          },
+          {
+              "name": "description",
+              "type": "string"
+          },
+          {
+              "name": "computation_duration_in_seconds",
+              "type": "int"
+          }, 
+          {
+              "name": "container_id",
+              "type": ["null", {
+                "type": "array",
+                "items": "string"
+              }],
+              "default": null
+          },
+          {
+            "name": "agent_id",
+            "type": ["null", "string"],
+            "default": null
+          }
+        ]
+      }
+    }
+  ]
+}

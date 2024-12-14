@@ -9,13 +9,14 @@ class GlobalLogger:
             logger (logging.logger): The global logger instance   
     '''
 
-    def __init__(self, filename: str, level: int = logging.INFO):
+    def __init__(self, filename: str, logger_name: str, level: int = logging.INFO):
         '''
         The function initializes the global logger instance whilst providing some
         level of customization.
 
             Parameters:
                 filename (str): Path to the logfile
+                logger_name (str): Name of the logger
                 level: (int): Log level (e.g. logging.INFO, logging.DEBUG) (default: logging.INFO)
             Returns:
                 None
@@ -27,7 +28,7 @@ class GlobalLogger:
                             format='%(asctime)s %(levelname)s %(module)s - %(funcName)s: %(message)s',
                             datefmt='%Y-%m-%d %H:%M:%S')
 
-        self.logger = logging.getLogger()
+        self.logger = logging.getLogger(logger_name)
 
     def get_logger(self) -> logging.Logger:
         '''

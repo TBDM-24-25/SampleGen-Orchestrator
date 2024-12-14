@@ -9,20 +9,27 @@ from docker.errors import DockerException
 
 from orchestrator.services.kafka_service import KafkaService
 from orchestrator.services.logger_service import GlobalLogger
+from orchestrator.services.schema_registry_service import SchemaRegistryService
+from orchestrator.services.avro_service import AvroService
 
 from orchestrator.services.status import Status
 
 # TODO - remove all print statements in the end
 # TODO - @leandro during container creation, check resources?
+# machen
+
 # TODO - @leandro handle empty or invalid input?
+
 # TODO - Finalize heartbeat agent, docker daemon check and resource check
+
 # TODO - @leandro report number of containers/container ids really necessary?
+# evtl sinnvoll, 
 
 # initialize logger
-logger = GlobalLogger(filename='orchestrator/container_handler/logfile.log').get_logger()
+logger = GlobalLogger(filename='orchestrator/container_handler/logfile.log', logger_name='container_handler_logger').get_logger()
 
 # initialize KafkaService with group_id Job_Consumers
-kafka_service = KafkaService(group_id='Job_Consumers')
+kafka_service = KafkaService(group_id='Job_Consumers', logger=logger)
 
 # agent_id based on the MAC address of host machine
 agent_id = get_mac_address()
@@ -40,6 +47,21 @@ docker_client = None
 
 # heartbeat check interval
 check_interval = 10
+
+
+
+sr_client = SchemaRegistryService().get_client()
+
+with open("schemas/job_status.avsc", 'r') as f:
+    job_status_schema_str = f.read()
+
+job_status_avro_serializer = AvroService(sr_client, job_status_schema_str).get_avro_serializer()
+
+with open('schemas/job_instruction.avsc', 'r') as f:
+    job_instruction_schema_str = f.read()
+
+job_instruction_avro_deserializer = AvroService(sr_client, job_instruction_schema_str).get_avro_deserializer()
+
 
 def initialize_docker_client():
     '''
@@ -119,6 +141,12 @@ def extract_container_ids(message_dict: dict) -> list:
     '''
     return message_dict.get('metadata').get('container_id')
 
+
+
+
+
+
+
 def render_job_template_and_produce_job_status_message(
         operation: str,
         status: Status,
@@ -142,15 +170,15 @@ def render_job_template_and_produce_job_status_message(
     job_template = environment.get_template('container_handler/job_status.json.j2')
 
     rendered_content = job_template.render(
-    operation=operation,
-    status=status.value,
-    container_image_name=container_image_name,
-    container_id=containers_created,
-    job_id=job_id)
-
+        operation=operation,
+        status=status.value,
+        container_image_name=container_image_name,
+        container_id=containers_created,
+        job_id=job_id
+    )
     content = json.loads(rendered_content)
 
-    kafka_service.send_message('Job_Status', content)
+    kafka_service.send_message('Job_Status', content, job_status_avro_serializer)
 
 def render_heartbeat_template_and_produce_agent_status_message(status: Status, failed_checks: list) -> None:
     '''
@@ -309,7 +337,7 @@ def consume_job_messages() -> None:
     '''
     logger.info('Message Consumer for Topic Job_Instruction successfully called')
     topic_name = 'Job_Instruction'
-    kafka_service.consume_messages(topic=[topic_name], message_handler=message_handler)
+    kafka_service.consume_messages(topic_names = [topic_name], message_handler = message_handler, avro_deserializer = job_instruction_avro_deserializer)
 
 def observe_docker_daemon():
     ''''

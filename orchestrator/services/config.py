@@ -15,6 +15,13 @@ class KafkaConfig(BaseConfig):
 
         if not self.bootstrap_servers:
             raise ValueError("KAFKA_BOOTSTRAP_SERVERS environment variable not set")
+     
+class SchemaRegistryConfig(BaseConfig):
+    def load_environment_variables(self) -> None:
+        self.schema_registry_url = os.getenv('SCHEMA_REGISTRY_URL', '')
+
+        if not self.schema_registry_url:
+            raise ValueError("SCHEMA_REGISTRY_URL environment variable not set")
 
 class DatabaseConfig(BaseConfig):
     def load_environment_variables(self) -> None:

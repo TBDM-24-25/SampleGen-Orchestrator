@@ -12,6 +12,16 @@ Angeben, dass wir schema registry verwenden
 
 
 
+erwähnen, dass wir KRaft version von Kafka Verwenden
+
+
+
+   ```bash
+    export SCHEMA_REGISTRY_URL=http://localhost:8081
+    ```
+
+
+
 The proposed framework consists of five main components, which are described briefly subsequently:
 
 1) **Job Handler**: @Leandro
@@ -83,7 +93,7 @@ With the provided Docker compose file, the installation of Kafka is straightforw
     ```
 3. (Optional) When Kafka has started up, you can access:<br>
     3.1 Kafka Grapical User Interface: http://localhost:8080<br>
-    3.2 Schema registry: http://localhost:8080
+    3.2 Schema registry: http://localhost:8081
 
 ### 3.2) Container Handler (Agent)
 With the provided Docker compose file, the installation of Kafka is straightforward. Proceed as follows:

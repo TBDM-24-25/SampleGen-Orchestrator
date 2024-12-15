@@ -42,7 +42,7 @@ class KafkaService:
             self.kafka_producer.flush()
             logger.info('Message %s produced to Topic %s', message, topic_name)
         except Exception as e:
-            logger.info('Unable to produce Message %s to Topic %s due to %s', message, topic_name, e)
+            logger.warning('Unable to produce Message %s to Topic %s due to %s', message, topic_name, e)
 
     def consume_messages(self, topic_names: list, message_handler: callable, avro_deserializer: AvroDeserializer = None) -> dict:
 
@@ -59,7 +59,7 @@ class KafkaService:
                 if message.error():
                     if message.error().code() == KafkaError._PARTITION_EOF:
                         # End of partition event
-                        logger.info('''Reached End of Partition for Topic %s} 
+                        logger.warning('''Reached End of Partition for Topic %s} 
                                          Partition %s''', message.topic, message.partition)
                     elif message.error():
                         raise KafkaError(message.error())
@@ -73,15 +73,14 @@ class KafkaService:
                     else:
                         # avro deserializer returns a dict object, representing the message
                         message_dict = avro_deserializer(message.value(), SerializationContext(message.topic(), MessageField.VALUE))
-                    
+
                     logger.info('Message %s consumed from Topic %s', message_dict, topic_names)
-                    print('consumed!')
                     # callback, allowing for individual message processing
                     message_handler(message_dict)
                     self.kafka_consumer.commit(message=message)
         except Exception as e:
-            logger.info('Unable to consume Message %s from Topic %s due to %s', message, topic_names, e)
+            logger.warning('Unable to consume Message %s from Topic %s due to %s', message, topic_names, e)
         except KeyboardInterrupt:
-            logger.info('Consumer interrupted')
+            logger.warning('Consumer interrupted')
         finally:
             self.kafka_consumer.close()

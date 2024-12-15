@@ -37,6 +37,12 @@ docker_client = None
 # heartbeat check interval
 check_interval = 30
 
+# initialize threading.Event() to allow for blocking of message consumption if
+# the agent has issues
+check_successful = threading.Event()
+# clear initially
+check_successful.clear()
+
 # initialize schema registry client
 sr_client = SchemaRegistryService().get_client()
 
@@ -229,7 +235,7 @@ def create_containers(
             status = Status.SUCCESS
 
         except Exception as e:
-            logger.info('Handling of Job Instruction for Job ID %s was not successful due to %s', job_id, e)
+            logger.warning('Handling of Job Instruction for Job ID %s was not successful due to %s', job_id, e)
             status = Status.FAILURE
             # terminate for loop early
             break
@@ -273,12 +279,13 @@ def delete_containers(
             status = Status.SUCCESS
 
         except Exception as e:
-            logger.info('Handling of Job Instruction for Job ID %s was not successful due to %s', job_id, e)
+            logger.warning('Handling of Job Instruction for Job ID %s was not successful due to %s', job_id, e)
             status = Status.FAILURE
             # terminate for loop early
             break
 
     render_job_template_and_produce_job_status_message('delete', status, container_image_name, containers_deleted, job_id)
+    logger.info('Handling of Job Instruction for Job ID %s was %s', job_id, status.value)
 
 def message_handler(message_dict: dict) -> None:
     '''
@@ -291,6 +298,13 @@ def message_handler(message_dict: dict) -> None:
     '''
     # extract all relevant fields which are common, no matter the operation (create/delete)
     operation, number_of_containers, job_id, container_image_name = extract_message_values(message_dict)
+
+    if not check_successful.is_set():
+    # Wenn check nicht erfolgreich ist, Nachricht überspringen
+        logger.warning('Handling of Job Instruction for Job ID %s was not successful due to Failure of Agent Check', job_id)
+        render_job_template_and_produce_job_status_message(operation, Status.FAILURE, container_image_name, [], job_id)
+        # return to consume_message and commit
+        return
 
     logger.info('Handle Job Instruction for Job ID %s - %s', job_id, operation)
 
@@ -317,7 +331,8 @@ def consume_job_messages() -> None:
     '''
     logger.info('Message Consumer for Topic Job_Instruction successfully called')
     topic_name = 'Job_Instruction'
-    kafka_service.consume_messages(topic_names = [topic_name], message_handler = message_handler, avro_deserializer = job_instruction_avro_deserializer)
+    kafka_service.consume_messages(topic_names = [topic_name], message_handler = message_handler,
+                                   avro_deserializer = job_instruction_avro_deserializer)
 
 def observe_docker_daemon():
     ''''
@@ -366,15 +381,19 @@ def observe_agent():
     '''
     while True:
         docker_client_status, container_id_running_containers = observe_docker_daemon()
-        status, failed_checks = checker(docker_client=docker_client_status,
-                         check2=Status.SUCCESS,
-                         check3=Status.SUCCESS)
+        # add checks if necessary
+        status, failed_checks = checker(docker_client=docker_client_status)
 
         if status == Status.FAILURE:
-            logger.info('The Container Agent has currently some issues: %s', failed_checks)
-
+            logger.warning('The Container Agent has currently some issues: %s', failed_checks)
+            # clear threading event
+            check_successful.clear()
+            logger.warning('Threading Event cleared')
         else:
             logger.info('The Container Agent is currently running smoothly')
+            # set threading event
+            check_successful.set()
+            logger.info('Threading Event set')
 
         render_heartbeat_template_and_produce_agent_status_message(status, failed_checks, container_id_running_containers)
         logger.info('The Heartbeat was %s', status.value)
@@ -398,10 +417,10 @@ def checker(**kwargs):
     for key, value in kwargs.items():
         if value == Status.FAILURE:
             failed_checks.append(key)
-            logger.info('The Check %s failed', key)
+            logger.warning('The Check %s failed', key)
 
     if failed_checks:
-        logger.info('The following Checks failed: %s', failed_checks)
+        logger.warning('The following Checks failed: %s', failed_checks)
         return Status.FAILURE, failed_checks
 
     else:
@@ -409,7 +428,6 @@ def checker(**kwargs):
         return Status.SUCCESS, failed_checks
 
 def main():
-    # TODO - block t2, if t1 is not successful
     t1 = threading.Thread(target=observe_agent)
     t2 = threading.Thread(target=consume_job_messages)
 

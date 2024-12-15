@@ -5,7 +5,7 @@ from orchestrator.services.schema_registry_service import SchemaRegistryService
 
 # Mock data
 job_instruction_data = {
-    "operation": "delete",
+    "operation": "create",
     "topic": "temperature",
     "container_image_name": "nginx",
     "number_of_containers": 1,
@@ -25,7 +25,7 @@ job_instruction_data = {
         "description": "This job generates temperature data for IoT simulation.",
         "computation_duration_in_seconds": 3600,
         # can be None for creation jobs or even be omitted
-        "container_id": ["1dcbed8ce893d305dfbdeebdb822fceb303b154b5fc8e367b089dddf0274300d"],
+        "container_id": ["df12f1ccdd2572616c864593f2250ee5c0d61c35c9a02dbc7c8aa131a3478398"],
         "agent_id": "88:4d:7c:dc:93:0f"
     }
 }

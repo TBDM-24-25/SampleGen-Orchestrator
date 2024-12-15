@@ -11,8 +11,25 @@ Via a Graphical User Interface, the user is able to submit jobs, providing only 
 Angeben, dass wir schema registry verwenden
 
 
+gemäss ihm 1 replication, 1 partition okay
+
+frage an ihn: 
+- 1 partition für unser fall, und wir nehmen zookeper image
+- und 1 broker
+- replication factorm = 1 
+- wir brauchen image ohne zookeper, with kraft und so 
+seine antwort: 1, 1,1 passt schon für uns
+kraft passt auch für uns, aber dann gehen connectors eher nict. 
+
+erwähnen dass wir 1,1 haben, und die limitationen aufzeigen
+
+
+
+
+
 
 erwähnen, dass wir KRaft version von Kafka Verwenden
+
 
 
 
@@ -20,6 +37,7 @@ erwähnen, dass wir KRaft version von Kafka Verwenden
     export SCHEMA_REGISTRY_URL=http://localhost:8081
     ```
 
+erwähnen dass eine limitation ist, dass wir nur von dockerhub ziehen
 
 
 The proposed framework consists of five main components, which are described briefly subsequently:

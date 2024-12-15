@@ -8,7 +8,7 @@ job_instruction_data = {
     "operation": "create",
     "topic": "temperature",
     "container_image_name": "nginx",
-    "number_of_containers": 1,
+    "number_of_containers": 2,
     "resource_limits": {
         "cpu": 1.0,
         # memory limits, string, with unit identifier such as b, k, m, g
@@ -25,7 +25,7 @@ job_instruction_data = {
         "description": "This job generates temperature data for IoT simulation.",
         "computation_duration_in_seconds": 3600,
         # can be None for creation jobs or even be omitted
-        "container_id": ["df12f1ccdd2572616c864593f2250ee5c0d61c35c9a02dbc7c8aa131a3478398"],
+        "container_id": ["7587778d168b24b9e1e4a39d8b474543fca4d9978bcfe4ea9e9d9348f7f85b71", "132793a4d185fe297b138d9a1aff7aa73bb54fd0e003f9dba00817ecbd53e113"],
         "agent_id": "88:4d:7c:dc:93:0f"
     }
 }

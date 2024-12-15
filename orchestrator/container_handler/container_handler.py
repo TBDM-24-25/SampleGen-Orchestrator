@@ -5,7 +5,7 @@ from getmac import get_mac_address
 from jinja2 import Environment, FileSystemLoader
 
 import docker
-from docker.errors import DockerException
+from docker.errors import DockerException, NotFound
 
 from orchestrator.services.kafka_service import KafkaService
 from orchestrator.services.logger_service import GlobalLogger
@@ -238,6 +238,8 @@ def create_containers(
             logger.warning('Handling of Job Instruction for Job ID %s was not successful due to %s', job_id, e)
             status = Status.FAILURE
             # terminate for loop early
+            # in create containers legit, as if one container cannot be started (wrong configuration), all of
+            # the containers suffer from the same problem - create_container is an all or nothing operation
             break
 
     render_job_template_and_produce_job_status_message('create', status, container_image_name, containers_created, job_id)
@@ -278,10 +280,18 @@ def delete_containers(
             containers_deleted.append(container_id)
             status = Status.SUCCESS
 
+        # handle cases, in which a container is no longer alive, ensuring that the others are processed
+        # NotFound error can be seen as less critical
+        except NotFound:
+            logger.warning('Container %s/%s with Image %s was not alive anymore, Container ID: %s',
+                        index + 1, number_of_containers, container_image_name, container_id)
+
         except Exception as e:
             logger.warning('Handling of Job Instruction for Job ID %s was not successful due to %s', job_id, e)
             status = Status.FAILURE
             # terminate for loop early
+            # in delete containers also legit, because if such an Exception is caused, there is an underlying
+            # larger problem
             break
 
     render_job_template_and_produce_job_status_message('delete', status, container_image_name, containers_deleted, job_id)

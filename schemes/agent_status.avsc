@@ -1,7 +1,7 @@
 {
   "namespace" : "samplegen_orchestrator.avro",
   "type": "record", 
-  "name": "heartbeat", 
+  "name": "agent_status", 
   "fields": [
     {
         "name": "operation",

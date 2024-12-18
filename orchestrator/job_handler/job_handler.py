@@ -5,8 +5,7 @@ from orchestrator.services.schema_registry_service import SchemaRegistryService
 
 # Mock data
 job_instruction_data = {
-    "operation": "create",
-    "topic": "temperature",
+    "operation": "delete",
     "container_image_name": "nginx",
     "number_of_containers": 2,
     "resource_limits": {
@@ -15,8 +14,8 @@ job_instruction_data = {
         "memory": "1g"
     },
     "environment_variables": {
-        "PYTHON_VERSION": "3.7",
-        "SPARK_VERSION": "3.0.0"
+        "TOPIC": "temperature",
+        "KAFKA_BOOTSTRAP_SERVERS": "localhost:9092"
     },
     "metadata": {
         "user": "user",
@@ -25,7 +24,7 @@ job_instruction_data = {
         "description": "This job generates temperature data for IoT simulation.",
         "computation_duration_in_seconds": 3600,
         # can be None for creation jobs or even be omitted
-        "container_id": ["7587778d168b24b9e1e4a39d8b474543fca4d9978bcfe4ea9e9d9348f7f85b71", "132793a4d185fe297b138d9a1aff7aa73bb54fd0e003f9dba00817ecbd53e113"],
+        "container_id": ["9e99c07cdd2597163f4f1d54ad2216169f39d57dd82b7ccccd750ee3e4e5dce4", "a6ba7a28f9f7ff1bc40611b5bfcb5edd258279942ef03b5f6417d334805977c1"],
         "agent_id": "88:4d:7c:dc:93:0f"
     }
 }
@@ -33,11 +32,11 @@ job_instruction_data = {
 # initialize logger
 logger = GlobalLogger.get_logger()
 
-with open("schemas/job_instruction.avsc", 'r') as f:
-    job_instruction_schema_str = f.read()
+with open("schemes/job_handling.avsc", 'r') as f:
+    job_handling_schema_str = f.read()
     
 schema_registry_client = SchemaRegistryService().get_client()
-job_instruction_avro_serializer = AvroService(schema_registry_client, job_instruction_schema_str).get_avro_serializer()
+job_handling_avro_serializer = AvroService(schema_registry_client, job_handling_schema_str).get_avro_serializer()
 
 def main():
     kafka_service = KafkaService(group_id='job_status_consumers')
@@ -45,7 +44,7 @@ def main():
     topic_name = 'Job_Instruction'
 
     try:
-        kafka_service.send_message(topic_name, job_instruction_data, job_instruction_avro_serializer)
+        kafka_service.send_message(topic_name, job_instruction_data, job_handling_avro_serializer)
     except RuntimeError as e:
         print(f"Error sending message: {e}")
 

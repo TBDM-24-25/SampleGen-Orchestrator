@@ -1,7 +1,7 @@
 {
   "namespace": "samplegen_orchestrator.avro",
   "type": "record",
-  "name": "job_instruction",
+  "name": "job_handling",
   "fields": [
     {
       "name": "operation",
@@ -10,10 +10,6 @@
         "name": "operation_enum",
         "symbols": ["create", "delete"]
       }
-    },
-    {
-      "name": "topic",
-      "type": "string"
     },
     {
       "name": "container_image_name",

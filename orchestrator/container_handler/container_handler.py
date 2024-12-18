@@ -34,7 +34,7 @@ environment.globals["agent_id"] = agent_id
 # initialize docker client with None
 docker_client = None
 
-# heartbeat check interval
+# agent status check interval
 check_interval = 30
 
 # initialize threading.Event() to allow for blocking of message consumption if
@@ -47,14 +47,14 @@ check_successful.clear()
 sr_client = SchemaRegistryService().get_client()
 
 # fetch job_status Avro schema
-with open("schemas/job_status.avsc", 'r') as jsf, open('schemas/job_instruction.avsc', 'r') as jis, open('schemas/heartbeat.avsc', 'r') as hs:
+with open("schemes/job_status.avsc", 'r') as jsf, open('schemes/job_handling.avsc', 'r') as jhs, open('schemes/agent_status.avsc', 'r') as ags:
     job_status_schema_str = jsf.read()
-    job_instruction_schema_str = jis.read()
-    heartbeat_schema_str = hs.read()
+    job_instruction_schema_str = jhs.read()
+    agent_status_schema_str = ags.read()
 
 # initialize respective serializers/deserializers
 job_status_avro_serializer = AvroService(sr_client, job_status_schema_str).get_avro_serializer()
-heartbeat_serializer = AvroService(sr_client, heartbeat_schema_str).get_avro_serializer()
+agent_status_serializer = AvroService(sr_client, agent_status_schema_str).get_avro_serializer()
 job_instruction_avro_deserializer = AvroService(sr_client, job_instruction_schema_str).get_avro_deserializer()
 
 def initialize_docker_client():
@@ -168,28 +168,28 @@ def render_job_template_and_produce_job_status_message(
 
     kafka_service.send_message('Job_Status', content, job_status_avro_serializer)
 
-def render_heartbeat_template_and_produce_agent_status_message(status: Status, failed_checks: list, containers_running: list) -> None:
+def render_agent_status_template_and_produce_agent_status_message(status: Status, failed_checks: list, containers_running: list) -> None:
     '''
-    The function renders a heartbeat template and 
+    The function renders a agent status template and 
     sends a agent status message to Kafka.
         Parameters:
-            status (Status): The status of the heartbeat (e.g., Status.SUCCESS, Status.FAILURE)
-            failed_checks (list): A list (potentially empty) of checks that failed during the heartbeat
+            status (Status): The status of the agent (e.g., Status.SUCCESS, Status.FAILURE)
+            failed_checks (list): A list (potentially empty) of checks that failed during the agent check
             containers_running (list): A list of running containers on this Docker daemon
     Returns:
         None
     '''
-    # load heartbeat_template
-    heartbeat_template = environment.get_template("container_handler/heartbeat.json.j2")
+    # load agent_status_template
+    agent_status_template = environment.get_template("container_handler/agent_status.json.j2")
 
-    rendered_content = heartbeat_template.render(
+    rendered_content = agent_status_template.render(
         status=status.value,
         failed_checks=failed_checks,
         containers_running=containers_running
     )
     content = json.loads(rendered_content)
 
-    kafka_service.send_message('Agent_Status', content, heartbeat_serializer)
+    kafka_service.send_message('Agent_Status', content, agent_status_serializer)
 
 def create_containers(
         number_of_containers: int,
@@ -383,7 +383,7 @@ def observe_docker_daemon():
 def observe_agent():
     '''
     The function continuously monitors the status of the Container Handler (Agent),
-    based on predefined checks, and provides a heartbeat.
+    based on predefined checks, and provides an agent check.
         Parameters:
             None
         Returns:
@@ -405,8 +405,8 @@ def observe_agent():
             check_successful.set()
             logger.info('Threading Event set')
 
-        render_heartbeat_template_and_produce_agent_status_message(status, failed_checks, container_id_running_containers)
-        logger.info('The Heartbeat was %s', status.value)
+        render_agent_status_template_and_produce_agent_status_message(status, failed_checks, container_id_running_containers)
+        logger.info('The Agent Status Check was %s', status.value)
 
         sleep(check_interval)
 

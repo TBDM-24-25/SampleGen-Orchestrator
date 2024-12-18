@@ -310,7 +310,7 @@ def message_handler(message_dict: dict) -> None:
     operation, number_of_containers, job_id, container_image_name = extract_message_values(message_dict)
 
     if not check_successful.is_set():
-    # Wenn check nicht erfolgreich ist, Nachricht überspringen
+    # if check not successful, skip message
         logger.warning('Handling of Job Instruction for Job ID %s was not successful due to Failure of Agent Check', job_id)
         render_job_template_and_produce_job_status_message(operation, Status.FAILURE, container_image_name, [], job_id)
         # return to consume_message and commit

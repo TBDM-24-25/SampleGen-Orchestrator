@@ -1,0 +1,54 @@
+{
+  "namespace" : "samplegen_orchestrator.avro",
+  "type": "record", 
+  "name": "heartbeat", 
+  "fields": [
+    {
+        "name": "operation",
+        "type": {
+          "type": "enum",
+          "name": "operation_enum",
+          "symbols": ["heartbeat"]
+        }
+    },
+    {
+        "name": "status",
+        "type": {
+          "type": "enum",
+          "name": "status_enum",
+          "symbols": ["successful", "unsuccessful"]
+        }
+    },
+    {
+        "name": "metadata",
+        "type": {
+          "type": "record",
+          "name": "metadata_type",
+          "fields": [
+            {
+                "name": "agent_id",
+                "type": "string"
+            }, 
+            {
+                "name": "timestamp", 
+                "type": "float"
+            },
+            {
+                "name": "failed_checks",
+                "type": {
+                    "type": "array",
+                    "items": "string"
+                }
+            },
+            {
+                "name": "containers_running",
+                "type": {
+                    "type": "array",
+                    "items": "string"
+                }
+            }
+          ]
+        }
+    }
+  ]
+}

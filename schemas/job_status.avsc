@@ -1,0 +1,55 @@
+{
+  "namespace" : "samplegen_orchestrator.avro",
+  "type": "record", 
+  "name": "job_status", 
+  "fields": [
+    {
+        "name": "operation",
+        "type": {
+          "type": "enum",
+          "name": "operation_enum",
+          "symbols": ["create", "delete"]
+        }
+    },
+    {
+        "name": "status",
+        "type": {
+          "type": "enum",
+          "name": "status_enum",
+          "symbols": ["successful", "unsuccessful"]
+        }
+    },
+    {
+        "name": "container_image_name",
+        "type": "string"
+    },
+    {
+        "name": "container_id",
+        "type": {
+          "type": "array",
+          "items": "string"
+        }
+    },
+    {
+        "name": "metadata",
+        "type": {
+          "type": "record",
+          "name": "metadata_type",
+          "fields": [
+            {
+                "name": "job_id",
+                "type": "string"
+            },
+            {
+                "name": "agent_id",
+                "type": "string"
+            }, 
+            {
+                "name": "timestamp", 
+                "type": "float"
+            }
+          ]
+        }
+    }
+  ]
+}

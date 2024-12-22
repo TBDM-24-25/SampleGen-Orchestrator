@@ -1,3 +1,7 @@
+networks:
+  kafka-network:
+    name: kafka-network
+    driver: bridge
 services:
   kafka:
     container_name: kafka
@@ -37,6 +41,8 @@ services:
       KAFKA_NUM_PARTITIONS: 1
     volumes:
     - ./kafka-data:/tmp/kafka-logs
+    networks:
+    - kafka-network
 
   kafka-ui:
     container_name: kafka-ui
@@ -53,6 +59,8 @@ services:
     depends_on:
     # making sure, kafka service has started bevore starting kafka-ui service
     - kafka
+    networks:
+    - kafka-network
 
   schema-registry:
     image: confluentinc/cp-schema-registry:latest
@@ -68,6 +76,8 @@ services:
     depends_on:
     # making sure, kafka service has started bevore starting schema-registry service
     - kafka
+    networks:
+    - kafka-network
 
   initializer:
     image: python:3.13-slim
@@ -80,3 +90,5 @@ services:
     depends_on:
     # making sure, kafka service has started bevore starting initializer service
     - kafka
+    networks:
+    - kafka-network

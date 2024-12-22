@@ -14,7 +14,7 @@ job_instruction_data = {
         "memory": "1g"
     },
     "environment_variables": {
-        "TOPIC": "temperature",
+        "KAFKA_TOPIC": "temperature",
         "KAFKA_BOOTSTRAP_SERVERS": "localhost:9092"
     },
     "metadata": {

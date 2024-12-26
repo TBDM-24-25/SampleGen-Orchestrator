@@ -15,7 +15,7 @@ class KafkaService:
     def __init__(self, group_id: str):
         kafka_config = KafkaConfig()
         self.kafka_base_config = {
-            'bootstrap.servers': kafka_config.bootstrap_servers
+            'bootstrap.servers': kafka_config.bootstrap_servers_host
         }
 
         self.kafka_consumer_config = {

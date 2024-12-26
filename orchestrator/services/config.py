@@ -11,10 +11,10 @@ class BaseConfig:
 
 class KafkaConfig(BaseConfig):
     def load_environment_variables(self) -> None:
-        self.bootstrap_servers: str = os.getenv('KAFKA_BOOTSTRAP_SERVERS', '')
+        self.bootstrap_servers_host: str = os.getenv('KAFKA_BOOTSTRAP_SERVERS_HOST', '')
 
-        if not self.bootstrap_servers:
-            raise ValueError("KAFKA_BOOTSTRAP_SERVERS environment variable not set")
+        if not self.bootstrap_servers_host:
+            raise ValueError("KAFKA_BOOTSTRAP_SERVERS_HOST environment variable not set")
 
 class SchemaRegistryConfig(BaseConfig):
     def load_environment_variables(self) -> None:

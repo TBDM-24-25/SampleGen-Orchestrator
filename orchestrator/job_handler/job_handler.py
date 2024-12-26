@@ -5,7 +5,7 @@ from orchestrator.services.schema_registry_service import SchemaRegistryService
 
 # Mock data
 job_instruction_data = {
-    "operation": "delete",
+    "operation": "create",
     "container_image_name": "nginx",
     "number_of_containers": 2,
     "resource_limits": {
@@ -15,7 +15,7 @@ job_instruction_data = {
     },
     "environment_variables": {
         "KAFKA_TOPIC": "temperature",
-        "KAFKA_BOOTSTRAP_SERVERS": "localhost:9092"
+        "KAFKA_BOOTSTRAP_SERVERS_DOCKER": "kafka:9093"
     },
     "metadata": {
         "user": "user",
@@ -24,7 +24,7 @@ job_instruction_data = {
         "description": "This job generates temperature data for IoT simulation.",
         "computation_duration_in_seconds": 3600,
         # can be None for creation jobs or even be omitted
-        "container_id": ["9e99c07cdd2597163f4f1d54ad2216169f39d57dd82b7ccccd750ee3e4e5dce4", "a6ba7a28f9f7ff1bc40611b5bfcb5edd258279942ef03b5f6417d334805977c1"],
+        "container_id": ["7d504d1f94d71361ae70a3e1dcd448ff210596a652933c6381d7b630de86b5ab", "a6ba7a28f9f7ff1bc40611b5bfcb5edd258279942ef03b5f6417d334805977c1"],
         "agent_id": "88:4d:7c:dc:93:0f"
     }
 }

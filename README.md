@@ -94,12 +94,12 @@ With the provided [Docker Compose File](./kafka/docker-compose.yaml), the instal
     ```
 2. Set the following environment variable and (optional) check if they were set correctly by running the following command:
     ```bash
-    export KAFKA_BOOTSTRAP_SERVERS=localhost:9092 && export SCHEMA_REGISTRY_URL=http://localhost:8081
+    export KAFKA_BOOTSTRAP_SERVERS_HOST=localhost:9092 && export SCHEMA_REGISTRY_URL=http://localhost:8081
 
     # by running
     ENV | grep -e "KAFKA_BOOTSTRAP_SERVER" -e "SCHEMA_REGISTRY_URL"
     # Ensure, the following output is returned:
-    # KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+    # KAFKA_BOOTSTRAP_SERVERS_HOST=localhost:9092
     # SCHEMA_REGISTRY_URL=http://localhost:8081
     ```
 3. (Optional, but highly recommended) After the startup of Kafka, you can access:<br>
@@ -117,10 +117,36 @@ To start up an instance of the Container Handler (Agent), proceed as follows:
     ```bash
     python3.13 -m orchestrator.container_handler.container_handler
     ```
+### 3.5) Preparing the Data Generator(s)
+In order to integrate the Data Generator(s) into the DCF, some minor adjustments (within the relevant parts of the application source code) are required, as shown below:
+1. Install the required dependency by means of the following command:
+    ```bash
+    python3.13 -m pip install confluent-kafka
+    ```
+2. Use the following code snippet to import the Producer class and the os package:
+    ```python 
+    from confluent_kafka import Producer
+    import os
+    ```
+3. Initialise the Kafka producer with the following snippet of code:
 
+    ```python 
+    # load environment variables necessary for Kafka accessability
+    kafka_bootstrap_servers_docker = os.getenv("KAFKA_BOOTSTRAP_SERVERS_DOCKER")
+    kafka_topic = os.getenv("KAFKA_TOPIC")
+    # initialize Kafka Producer if environment variables loaded successfully
+    if kafka_bootstrap_servers and kafka_topic:
+        kafka_producer = Producer({"bootstrap.servers": kafka_bootstrap_servers_docker})
+    ```
+4. At the correct position (ideally within a while true-loop with the appropriate interval), stream the data to the Kafka topic previously defined in the GUI by integrating the following bit of code:
+    ```python 
+    kafka_producer.produce(topic=kafka_topic, value=json.dumps(output_data).encode('utf-8'))
+    ```
+    Note: Make sure that output_data is a serialisable Python object (e.g. dict, list)
 
-### 3.5) Preparation of Docker Containers
-- hier beschreiben, wie man die docker container vorbereiten muss dass alles sauber läuft
+Once the integration described in the four steps above has been completed, please proceed as usual. This involves building the container and making it accessible via Docker Hub. Now the container image is ready to be used. 
+
+Please note that, in addition to confluent-kafka, other libraries can be utilised. If you do not wish to work with Python, you may use Java instead. In both cases, adjust the source code accordingly.
 
 ## 4) Usage
 ### 4.1) Subtitle 1

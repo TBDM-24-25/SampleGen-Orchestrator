@@ -119,7 +119,7 @@ To start up an instance of the Container Handler (Agent), proceed as follows:
     ```
 ### 3.5) Preparing the Data Generator(s)
 In order to integrate the Data Generator(s) into the DCF, some minor adjustments (within the relevant parts of the application source code) are required, as shown below:
-1. Install the required dependency by means of the following command:
+1. Install the required dependency ([confluent-kafka](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#)) by means of the following command:
     ```bash
     python3.13 -m pip install confluent-kafka
     ```
@@ -128,8 +128,8 @@ In order to integrate the Data Generator(s) into the DCF, some minor adjustments
     from confluent_kafka import Producer
     import os
     ```
-3. Initialise the Kafka producer with the following snippet of code:
-
+3. Initialise the [Kafka Producer](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#pythonclient-producer
+) with the following snippet of code:
     ```python 
     # load environment variables necessary for Kafka accessability
     kafka_bootstrap_servers_docker = os.getenv("KAFKA_BOOTSTRAP_SERVERS_DOCKER")

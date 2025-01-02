@@ -188,4 +188,4 @@ The DCF is available under the MIT [license](./LICENSE).
 ## 7) Contacts
 - **Christian Bieri**, Site Reliability Engineer, info@christianbieri.ch
 - **Frederico Fischer**, Frontend Engineer, fredae14@hotmail.com
-- **Leandro Hoehnen**, DevOps Engineer, exponent_stooge805@perfunc.ch
+- **Leandro Hoenen**, DevOps Engineer, exponent_stooge805@perfunc.ch

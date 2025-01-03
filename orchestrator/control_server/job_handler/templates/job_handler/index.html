@@ -1,0 +1,9 @@
+{% if jobs %}
+    <ul>
+    {% for job in jobs %}
+        <li><a href="/polls/{{ job.id }}/">{{ job.name }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No jobs are available.</p>
+{% endif %}

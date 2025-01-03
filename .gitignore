@@ -4,3 +4,4 @@ kafka-data/
 *.log
 .pylintrc
 .env
+orchestrator/control_server/db.sqlite3

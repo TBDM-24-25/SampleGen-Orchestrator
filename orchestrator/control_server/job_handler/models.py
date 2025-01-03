@@ -14,6 +14,7 @@ class Job(models.Model):
     # user ID foreign key, will be added later when authentication is implemented
     # TODO: implement authentication
     # user = models.ForeignKey(User, on_delete=models.CASCADE)
+    # TODO: enviroment variables must be mandatory when creating a job
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
  

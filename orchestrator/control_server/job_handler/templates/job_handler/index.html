@@ -1,9 +1,40 @@
+{% load bootstrap5 %}
+{% bootstrap_javascript %}
+{% bootstrap_css %}
+
 {% if jobs %}
     <ul>
     {% for job in jobs %}
-        <li><a href="/polls/{{ job.id }}/">{{ job.name }}</a></li>
+        <li><a href="/jobs/{{ job.id }}/">{{ job.name }}</a></li>
     {% endfor %}
     </ul>
 {% else %}
     <p>No jobs are available.</p>
 {% endif %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Job List</h3>
+                </div>
+                <div class="card-body">
+                    {% if jobs %}
+                        <ul class="list-group">
+                        {% for job in jobs %}
+                            <li class="list-group-item">
+                                <a href="/jobs/{{ job.id }}/">{{ job.name }}</a>
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted">No jobs are available.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

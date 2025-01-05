@@ -31,3 +31,11 @@ def create_job(request):
         })
     else:
         return HttpResponseRedirect(reverse('index'))
+    
+# filepath: orchestrator/control_server/job_handler/views.py
+from django.shortcuts import render
+from .forms import SampleForm
+
+def show_bootstrap(request):
+    form = SampleForm()
+    return render(request, 'job_handler/bootstrap_try.html', {'form': form})

@@ -1,16 +1,10 @@
-from django.shortcuts import render
-from django.http import HttpResponse, HttpResponseRedirect
-from django.urls import reverse
+from django.shortcuts import render, redirect
 from .models import Job, EnviromentVariable
 from .forms import JobForm, EnviromentVariableForm, SampleForm, BaseEnviromentVariableFormset
 from django.forms import modelformset_factory
 
 
-# TODO: use this in the index page later:
-# <li><a href="{% url 'detail' question.id %}">{{ question.question_text }}</a></li>
-# path("<int:question_id>/", views.detail, name="detail"),
-# See https://docs.djangoproject.com/en/5.1/intro/tutorial03/
-# Lists all the available jobs and is also the root page
+
 def index(request):
     """The index page lists all the available jobs and their current state. It is also the root page of the application."""
     jobs = Job.objects.all()
@@ -77,7 +71,7 @@ def create_job(request):
             enviroment_variable.save()
         
         # Redirect to the index page, reverse() is used to avoid hardcoding the URL
-        return HttpResponseRedirect(reverse('index'))
+        return redirect("index")
     
     context = {
         'job_form': job_form,

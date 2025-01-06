@@ -10,7 +10,7 @@ class Job(models.Model):
     container_cpu_limit = models.FloatField(null=False)
     container_memory_limit = models.CharField(max_length=200)
     computation_duration_in_seconds = models.IntegerField()
-    kafka_timestamp = models.DateTimeField()
+    kafka_timestamp = models.DateTimeField(null=True)
     # user ID foreign key, will be added later when authentication is implemented
     # TODO: implement authentication
     # user = models.ForeignKey(User, on_delete=models.CASCADE)

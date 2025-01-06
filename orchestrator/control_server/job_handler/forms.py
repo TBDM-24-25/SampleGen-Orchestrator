@@ -29,12 +29,13 @@ class JobForm(ModelForm):
         }
 
 class EnviromentVariableForm(ModelForm):
-    model = EnviromentVariable
-    fields = ["variable_name", "variable_value"]
-    labels = {
-        "variable_name": _("Name"),
-        "variable_value": _("Value"),
-        }
+    class Meta:
+        model = EnviromentVariable
+        fields = ["variable_name", "variable_value"]
+        labels = {
+            "variable_name": _("Name"),
+            "variable_value": _("Value"),
+            }
     
 
 class BaseEnviromentVariableFormset(BaseModelFormSet):

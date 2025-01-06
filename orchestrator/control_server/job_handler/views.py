@@ -25,8 +25,6 @@ def create_job(request):
     """This view is responsible for creating a new job and the corresponding enviroment variables. It handles both GET and POST requests."""
 
     current_extra_forms = 1
-    extra_form_iterator = 1
-    EnviromentVariableFormSet = modelformset_factory(model=EnviromentVariable, form=EnviromentVariableForm, formset=BaseEnviromentVariableFormset, extra=extra_form_iterator)
 
     # Everithing else than a POST request
     if request.method != 'POST':
@@ -42,7 +40,9 @@ def create_job(request):
         return render(request, 'job_handler/new_job.html', context=context)
     
     # Only POST requests
+    current_extra_forms = int(request.POST.get('extra_forms'))
     job_form = JobForm(request.POST)
+    EnviromentVariableFormSet = modelformset_factory(model=EnviromentVariable, form=EnviromentVariableForm, formset=BaseEnviromentVariableFormset, extra=current_extra_forms)
     enviroment_variable_formset = EnviromentVariableFormSet(request.POST, prefix='env')
 
     # If the data in the existing form set is valid, the existing data stays in the formset and a new form is added

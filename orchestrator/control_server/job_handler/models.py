@@ -20,8 +20,8 @@ class Job(models.Model):
  
 
 class EnviromentVariable(models.Model):
-    variable_name = models.CharField(max_length=200)
-    variable_value = models.CharField(max_length=200)
+    variable_name = models.CharField(max_length=200, null=False)
+    variable_value = models.CharField(max_length=200, null=False)
     job = models.ForeignKey(Job, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

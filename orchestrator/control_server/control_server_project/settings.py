@@ -31,7 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'daphne',
+    'daphne', # Must stay at the top since other third-party apps that require an overloaded or replaced runserver command may conflict with Daphne
     'channels',
     'django.contrib.admin',
     'django.contrib.auth',

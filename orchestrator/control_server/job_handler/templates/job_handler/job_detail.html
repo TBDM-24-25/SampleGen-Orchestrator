@@ -1,0 +1,90 @@
+{# Load the tag library #}
+{% load bootstrap5 %}
+
+{# Load CSS and JavaScript #}
+{% bootstrap_css %}
+{% bootstrap_javascript %}
+
+{# Display django.contrib.messages as Bootstrap alerts #}
+{% bootstrap_messages %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Detail</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Job Detail</h1>
+        <div class="card mb-4">
+            <div class="card-header">
+                Job Information
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">{{ job.name }}</h5>
+                <p class="card-text"><strong>Latest Operation:</strong> {{ job.latest_operation }}</p>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                Environment Variables
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    {% for env_var in enviroment_variables %}
+                        <li class="list-group-item">
+                            <strong>{{ env_var.variable_name }}:</strong> {{ env_var.variable_value }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                Agent
+            </div>
+            <div class="card-body">
+                {% if agent %}
+                    <ul class="list-group">
+                        <li class="list-group-item">
+                            <strong>Status:</strong> {{ agent.status }}<br>
+                            <strong>Kafka Timestamp:</strong> {{ agent.kafka_timestamp }}<br>
+                            <strong>Created At:</strong> {{ agent.created_at }}<br>
+                            <strong>Updated At:</strong> {{ agent.updated_at }}
+                        </li>
+                    </ul>
+                {% else %}
+                    <p class="card-text">No agent deployed for this job.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                Containers
+            </div>
+            <div class="card-body">
+                {% if containers %}
+                    <ul class="list-group">
+                        {% for container in containers %}
+                            <li class="list-group-item">
+                                <strong>Status:</strong> {{ container.status }}<br>
+                                <strong>Agent:</strong> {{ container.agent.status }}<br>
+                                <strong>Created At:</strong> {{ container.created_at }}<br>
+                                <strong>Updated At:</strong> {{ container.updated_at }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="card-text">No containers associated with this job.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

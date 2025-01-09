@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect
-from .models import Job, EnviromentVariable
+from .models import Job, EnviromentVariable, Agent, Container
 from .forms import JobForm, EnviromentVariableForm, SampleForm, BaseEnviromentVariableFormset
 from django.forms import modelformset_factory
+from django.http import Http404
 
 
 
@@ -84,6 +85,27 @@ def create_job(request):
     }
 
     return render(request, 'job_handler/new_job.html', context=context)
+
+
+def job_detail(request, job_id):
+    try:
+        job = Job.objects.get(pk=job_id)
+    except:
+        raise Http404("Job does not exist")
+    
+    # Get the related objects
+    enviroment_variables = EnviromentVariable.objects.filter(job=job)
+    agent = job.agent
+    containers = Container.objects.filter(job=job)
+    
+    context = {
+        "job": job,
+        "enviroment_variables": enviroment_variables,
+        "agent": agent,
+        "containers": containers,
+    }
+    return render(request, "job_handler/job_detail.html", context)
+
         
 
 def show_bootstrap(request):

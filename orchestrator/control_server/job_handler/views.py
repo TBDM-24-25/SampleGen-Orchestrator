@@ -1,23 +1,36 @@
 from django.shortcuts import render, redirect
-from .models import Job, EnviromentVariable, Agent, Container
-from .forms import JobForm, EnviromentVariableForm, SampleForm, BaseEnviromentVariableFormset
+from .models import Job, EnviromentVariable, Container
+from .forms import JobForm, EnviromentVariableForm, BaseEnviromentVariableFormset
 from django.forms import modelformset_factory
 from django.http import Http404
 
 
 
 def index(request):
-    """The index page lists all the available jobs and their current state. It is also the root page of the application."""
-    jobs = Job.objects.all()
+    """The index page lists all the available jobs and their current state. It is also the root page of the application.
+    The page is implemented using WebSockets with Django Channels.
+    """
+    return render(request, 'job_handler/index.html')
 
+
+def job_detail(request, job_id):
+    try:
+        job = Job.objects.get(pk=job_id)
+    except:
+        raise Http404("Job does not exist")
+    
+    # Get the related objects
+    enviroment_variables = EnviromentVariable.objects.filter(job=job)
+    agent = job.agent
+    containers = Container.objects.filter(job=job)
+    
     context = {
-        'jobs': jobs,
+        "job": job,
+        "enviroment_variables": enviroment_variables,
+        "agent": agent,
+        "containers": containers,
     }
-    return render(request, 'job_handler/index.html', context)
-
-
-def index_websocket(request):
-    return render(request, 'job_handler/index_websocket.html')
+    return render(request, "job_handler/job_detail.html", context)
 
 
 def create_job(request):
@@ -86,28 +99,3 @@ def create_job(request):
 
     return render(request, 'job_handler/new_job.html', context=context)
 
-
-def job_detail(request, job_id):
-    try:
-        job = Job.objects.get(pk=job_id)
-    except:
-        raise Http404("Job does not exist")
-    
-    # Get the related objects
-    enviroment_variables = EnviromentVariable.objects.filter(job=job)
-    agent = job.agent
-    containers = Container.objects.filter(job=job)
-    
-    context = {
-        "job": job,
-        "enviroment_variables": enviroment_variables,
-        "agent": agent,
-        "containers": containers,
-    }
-    return render(request, "job_handler/job_detail.html", context)
-
-        
-
-def show_bootstrap(request):
-    form = SampleForm()
-    return render(request, 'job_handler/bootstrap_try.html', {'form': form})

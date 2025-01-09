@@ -1,40 +1,124 @@
+{# Load the tag library #}
 {% load bootstrap5 %}
-{% bootstrap_javascript %}
+
+{# Load CSS and JavaScript #}
 {% bootstrap_css %}
+{% bootstrap_javascript %}
 
-{% if jobs %}
-    <ul>
-    {% for job in jobs %}
-        <li><a href="/jobs/{{ job.id }}/">{{ job.name }}</a></li>
-    {% endfor %}
-    </ul>
-{% else %}
-    <p>No jobs are available.</p>
-{% endif %}
+{# Display django.contrib.messages as Bootstrap alerts #}
+{% bootstrap_messages %}
 
-{% block content %}
-<div class="container mt-5">
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Job List</h3>
-                </div>
-                <div class="card-body">
-                    {% if jobs %}
-                        <ul class="list-group">
-                        {% for job in jobs %}
-                            <li class="list-group-item">
-                                <a href="/jobs/{{ job.id }}/">{{ job.name }}</a>
-                            </li>
-                        {% endfor %}
-                        </ul>
-                    {% else %}
-                        <p class="text-muted">No jobs are available.</p>
-                    {% endif %}
-                </div>
-            </div>
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job List</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Jobs</h1>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="thead-dark">
+                    <tr>
+                        <th scope="col">Job Name</th>
+                        <th scope="col">Latest Operation</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="job-list">
+                    <!-- Job rows will be inserted here by JavaScript -->
+                </tbody>
+            </table>
         </div>
     </div>
-</div>
-{% endblock %}
+
+    <script>
+        const socket = new WebSocket('ws://localhost:8000/ws/job/');
+
+        socket.onopen = function(e) {
+            console.log('WebSocket connection established');
+            // Request job data
+            socket.send(JSON.stringify({ type: 'fetch_jobs' }));
+        };
+
+        socket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data.type === 'job_list') {
+                console.log('Received job data:', data.jobs);
+                renderJobs(data.jobs);
+            } else if (data.type === 'error') {
+                console.error('Error:', data.message);
+            }
+        };
+
+        socket.onclose = function(e) {
+            console.log('WebSocket connection closed');
+        };
+
+        socket.onerror = function(e) {
+            console.error('WebSocket error:', e);
+        };
+
+        function renderJobs(jobs) {
+            const jobList = document.getElementById('job-list');
+            jobList.innerHTML = ''; // Clear existing jobs
+
+            jobs.forEach(job => {
+                const jobRow = document.createElement('tr');
+
+                const jobNameCell = document.createElement('td');
+                const jobNameLink = document.createElement('a');
+                jobNameLink.href = `/job_handler/job_detail/${job.id}/`; // Set the href to the detail view URL
+                jobNameLink.textContent = job.name;
+                jobNameCell.appendChild(jobNameLink);
+                jobRow.appendChild(jobNameCell);
+
+                const jobOperationCell = document.createElement('td');
+                jobOperationCell.textContent = job.latest_operation;
+                jobRow.appendChild(jobOperationCell);
+
+                const jobActionsCell = document.createElement('td');
+                jobActionsCell.innerHTML = `
+                    <button class="btn btn-success btn-sm me-2" onclick="startJob(${job.id})">Start</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteJob(${job.id})">Delete</button>
+                `;
+                jobRow.appendChild(jobActionsCell);
+
+                jobList.appendChild(jobRow);
+            });
+        }
+
+        function startJob(jobId) {
+            fetch(`/start_job/${jobId}/`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Job started:', data);
+                })
+                .catch(error => {
+                    console.error('Error starting job:', error);
+                });
+        }
+
+        function deleteJob(jobId) {
+            fetch(`/delete_job/${jobId}/`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Job deleted:', data);
+                    // Optionally, remove the job row from the table
+                    const jobRow = document.querySelector(`tr[data-job-id="${jobId}"]`);
+                    if (jobRow) {
+                        jobRow.remove();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting job:', error);
+                });
+        }
+    </script>
+</body>
+</html>

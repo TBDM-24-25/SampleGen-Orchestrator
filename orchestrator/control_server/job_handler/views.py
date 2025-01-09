@@ -15,6 +15,10 @@ def index(request):
     return render(request, 'job_handler/index.html', context)
 
 
+def index_websocket(request):
+    return render(request, 'job_handler/index.html')
+
+
 def create_job(request):
     """This view is responsible for creating a new job and the corresponding enviroment variables. It handles both GET and POST requests."""
 

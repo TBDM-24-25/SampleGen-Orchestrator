@@ -49,7 +49,7 @@ def create_job(request):
             'env_formset': enviroment_variable_formset,
             'extra_forms': current_extra_forms,
         }
-        return render(request, 'job_handler/new_job.html', context=context)
+        return render(request, 'job_handler/create_job.html', context=context)
     
     # Only POST requests
     current_extra_forms = int(request.POST.get('extra_forms'))
@@ -69,7 +69,7 @@ def create_job(request):
             'env_formset': enviroment_variable_formset,
             'extra_forms': current_extra_forms,
         }
-        return render(request, 'job_handler/new_job.html', context=context)
+        return render(request, 'job_handler/create_job.html', context=context)
 
 
     # Save form data in the database
@@ -97,5 +97,5 @@ def create_job(request):
         'extra_forms': current_extra_forms,
     }
 
-    return render(request, 'job_handler/new_job.html', context=context)
+    return render(request, 'job_handler/create_job.html', context=context)
 

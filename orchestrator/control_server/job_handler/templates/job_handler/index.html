@@ -1,24 +1,8 @@
-{# Load the tag library #}
-{% load bootstrap5 %}
+{% extends "base.html" %}
 
-{# Load CSS and JavaScript #}
-{% bootstrap_css %}
-{% bootstrap_javascript %}
+{% block title %}Jobs{% endblock %}
 
-{# Display django.contrib.messages as Bootstrap alerts #}
-{% bootstrap_messages %}
-
-
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job List</title>
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
+{% block content %}
     <div class="container mt-5">
         <h1 class="mb-4">Jobs</h1>
         <div class="table-responsive">
@@ -36,7 +20,9 @@
             </table>
         </div>
     </div>
+{% endblock %}
 
+{% block extra_js %}
     <script>
         const socket = new WebSocket('ws://localhost:8000/ws/job/');
 
@@ -120,5 +106,4 @@
                 });
         }
     </script>
-</body>
-</html>
+{% endblock extra_js %}

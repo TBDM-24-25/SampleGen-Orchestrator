@@ -1,0 +1,29 @@
+
+
+
+<script>
+    const socket = new WebSocket('ws://localhost:8000/ws/job/');
+
+    socket.onopen = function(e) {
+        console.log('WebSocket connection established');
+        // Request job data
+        socket.send(JSON.stringify({ type: 'fetch_jobs' }));
+    };
+
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.type === 'job_list') {
+            console.log('Received job data:', data.jobs);
+        } else if (data.type === 'error') {
+            console.error('Error:', data.message);
+        }
+    };
+
+    socket.onclose = function(e) {
+        console.log('WebSocket connection closed');
+    };
+
+    socket.onerror = function(e) {
+        console.error('WebSocket error:', e);
+    };
+</script>

@@ -16,7 +16,7 @@ def index(request):
 
 
 def index_websocket(request):
-    return render(request, 'job_handler/index.html')
+    return render(request, 'job_handler/index_websocket.html')
 
 
 def create_job(request):

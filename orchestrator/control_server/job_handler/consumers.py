@@ -6,10 +6,15 @@ from . import services
 
 class JobConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        self.job_group_name = "jobs"
+
+        # Join room group
+        await self.channel_layer.group_add(self.job_group_name, self.channel_name)
+
         await self.accept()
     
     async def disconnect(self, code):
-        pass
+        await self.channel_layer.group_discard(self.job_group_name, self.channel_name)
 
     @database_sync_to_async
     def get_jobs(self):
@@ -21,16 +26,19 @@ class JobConsumer(AsyncWebsocketConsumer):
         message_type = text_data_json.get('type')
 
         if message_type == 'fetch_jobs':
-            # Fetch job data from the database
-            jobs = await self.get_jobs()
-            # Send job data back to the client
-            await self.send(text_data=json.dumps({
-                'type': 'job_list',
-                'jobs': jobs
-            }, default=services.json_serial_date_time),)
+            await self.fetch_jobs()
         else:
             # Handle other message types if needed
             await self.send(text_data=json.dumps({
                 'type': 'error',
                 'message': 'Unknown message type'
             }))
+
+    async def fetch_jobs(self, event=None):
+        # Fetch job data from the database
+        jobs = await self.get_jobs()
+        # Send job data back to the client
+        await self.send(text_data=json.dumps({
+            'type': 'job_list',
+            'jobs': jobs
+        }, default=services.json_serial_date_time))

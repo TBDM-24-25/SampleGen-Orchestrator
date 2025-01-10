@@ -1,8 +1,12 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from .models import Job, EnviromentVariable, Container
 from .forms import JobForm, EnviromentVariableForm, BaseEnviromentVariableFormset
 from django.forms import modelformset_factory
 from django.http import Http404
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
 
 
@@ -99,3 +103,16 @@ def create_job(request):
 
     return render(request, 'job_handler/create_job.html', context=context)
 
+
+@require_http_methods(["DELETE"])
+def delete_job(request, job_id):
+    job = get_object_or_404(Job, pk=job_id)
+    job.delete()
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        "jobs", # Group name
+        {
+            "type": "fetch.jobs", # Method to invoke
+        }
+    )
+    return JsonResponse({'status': 'Job deleted'})

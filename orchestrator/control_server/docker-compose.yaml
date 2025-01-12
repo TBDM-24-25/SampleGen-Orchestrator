@@ -1,0 +1,21 @@
+services:
+  # Redis instance for Django Channels
+  redis_main:
+    image: redis:7
+    container_name: redis_channels
+    ports:
+      - "6379:6379"
+    # You can add volumes or commands if needed
+    # volumes:
+    #   - ./redis_channels_data:/data
+    # command: ["redis-server", "--appendonly", "yes"]
+
+  # Second Redis instance for Celery
+  redis_celery:
+    image: redis:7
+    container_name: redis_celery
+    ports:
+      - "6380:6379"  # maps the container's internal port 6379 to 6380 on the host
+    # volumes:
+    #   - ./redis_celery_data:/data
+    # command: ["redis-server", "--appendonly", "yes"]

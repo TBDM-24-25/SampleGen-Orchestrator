@@ -97,7 +97,7 @@ With the provided [Docker Compose File](./kafka/docker-compose.yaml), the instal
     export KAFKA_BOOTSTRAP_SERVERS_HOST=localhost:9092 && export SCHEMA_REGISTRY_URL=http://localhost:8081
 
     # by running
-    ENV | grep -e "KAFKA_BOOTSTRAP_SERVER" -e "SCHEMA_REGISTRY_URL"
+    ENV | grep -e "KAFKA_BOOTSTRAP_SERVERS_HOST" -e "SCHEMA_REGISTRY_URL"
     # Ensure, the following output is returned:
     # KAFKA_BOOTSTRAP_SERVERS_HOST=localhost:9092
     # SCHEMA_REGISTRY_URL=http://localhost:8081

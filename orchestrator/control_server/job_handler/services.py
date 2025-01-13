@@ -58,3 +58,6 @@ def render_job_instruction_message(operation,
     rendered_message = template.render(context)
 
     return rendered_message
+
+def send_kafka_message(topic_name, message):
+    return None

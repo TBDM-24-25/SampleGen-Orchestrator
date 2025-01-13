@@ -7,6 +7,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from .tasks import start_job_task
 
 
 
@@ -116,3 +117,11 @@ def delete_job(request, job_id):
         }
     )
     return JsonResponse({'status': 'Job deleted'})
+
+
+@require_http_methods(["POST"])
+def start_job(request, job_id):
+    # Call service that is asynchronly starting jobs
+    job = Job.objects.get(pk=job_id)
+    start_job_task(job)
+    return JsonResponse({'status': 'job started', "data": "job started"})

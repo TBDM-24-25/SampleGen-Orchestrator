@@ -99,7 +99,7 @@
     }
 
     function startJob(jobId) {
-        fetch(`/start_job/${jobId}/`, {
+        fetch(`/job_handler/start_job/${jobId}/`, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': csrftoken,

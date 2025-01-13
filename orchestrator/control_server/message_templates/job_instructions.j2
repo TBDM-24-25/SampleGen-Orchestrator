@@ -1,0 +1,25 @@
+{
+  "operation": "{{ operation }}",
+  "container_image_name": "{{ container_image_name }}",
+  "number_of_containers": {{ number_of_containers }},
+  "resource_limits": {
+    "cpu": {{ resource_limits.cpu }},
+    "memory": "{{ resource_limits.memory }}"
+  },
+  "environment_variables": {
+    {% if environment_variables %}
+      {% for key, value in environment_variables.items() %}
+        "{{ key }}": "{{ value }}"{{ "," if not loop.last }}
+      {% endfor %}
+    {% endif %}
+  },
+  "metadata": {
+    "user": "{{ metadata.user|default('anonymous') }}",
+    "job_id": "{{ metadata.job_id|default('') }}",
+    "timestamp": {{ metadata.timestamp|default(0.0) }},
+    "description": "{{ metadata.description|default('N/A') }}",
+    "computation_duration_in_seconds": {{ metadata.computation_duration_in_seconds|default(0) }},
+    "container_id": {% if metadata.container_id is not none %}[{% for item in metadata.container_id %}"{{ item }}"{{ "," if not loop.last }}{% endfor %}]{% else %}null{% endif %},
+    "agent_id": {% if metadata.agent_id is not none %}"{{ metadata.agent_id }}"{% else %}null{% endif %}
+  }
+}

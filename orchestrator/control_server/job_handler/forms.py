@@ -10,9 +10,10 @@ class JobForm(ModelForm):
     class Meta:
         # TODO: Add memory limit field
         model = Job
-        fields = ["name", "container_image_name", "container_number", "container_cpu_limit", "container_memory_limit_in_mb", "computation_duration_in_seconds", "iot_data_kafka_topic"]
+        fields = ["name", "description", "container_image_name", "container_number", "container_cpu_limit", "container_memory_limit_in_mb", "computation_duration_in_seconds", "iot_data_kafka_topic"]
         labels = {
             "name": _("Name"),
+            "description": _("Description"),
             "container_image_name": _("Container image name"),
             "container_number": _("Container number"),
             "container_cpu_limit": _("Container CPU limit"),
@@ -22,6 +23,7 @@ class JobForm(ModelForm):
         }
         help_texts = {
             "name": _("How you would like to name your Job"),
+            "description": _("Describe what the job does"),
             "container_image_name": _("Provide the container image name use in your container registry."),
             "container_number": _("the number of containers to deploy"),
             "container_cpu_limit": _("The amount of CPU the container can use. Please provide a floating point number."),

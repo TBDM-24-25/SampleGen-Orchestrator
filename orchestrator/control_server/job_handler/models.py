@@ -12,6 +12,7 @@ class Agent(models.Model):
 
 class Job(models.Model):
     name = models.CharField(max_length=200)
+    description = models.TextField(max_length=500)
     latest_operation = models.CharField(max_length=200)
     container_image_name = models.CharField(max_length=200)
     container_number = models.IntegerField(default=1)

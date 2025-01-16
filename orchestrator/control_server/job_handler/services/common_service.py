@@ -55,7 +55,7 @@ def render_job_instruction_message(job, enviroment_variables):
             "user": "user",
             "job_id": str(job.id),
             "timestamp": timestamp, 
-            "description": "This job generates temperature data for IoT simulation.", # Placeholder, will be replaced with the job description
+            "description": job.description,
             "computation_duration_in_seconds": job.computation_duration_in_seconds
         }
     }

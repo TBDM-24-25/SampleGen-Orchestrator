@@ -1,6 +1,8 @@
 from datetime import date, datetime
 from jinja2 import Environment, FileSystemLoader
+from dotenv import load_dotenv
 import os
+import time
 
 
 def json_serial_date_time(obj):
@@ -9,53 +11,54 @@ def json_serial_date_time(obj):
         return obj.isoformat()
     raise TypeError("Type %s not serializable" % type(obj))
 
-def render_job_instruction_message(operation,
-                                   container_image_name,
-                                   number_of_containers,
-                                   container_cpu_limit,
-                                   container_memory_limit,
-                                   enviroment_variables,
-                                   user,
-                                   job_id,
-                                   timestamp,
-                                   job_description,
-                                   computation_duration_in_seconds):
-    # Refactor environment variable list to a dict so that it can be rendered into the job_instructions jinja2 template
+def render_job_instruction_message(job, enviroment_variables):
+    # Prepare dictionary with enviroment variables. The KAFKA_TOPIC and KAFKA_BOOTSTRAP_SERVERS_DOCKER are required
+    load_dotenv()
+    prepared_enviroment_variables = {}
     try:
+        KAFKA_BOOTSTRAP_SERVERS_DOCKER = os.getenv("KAFKA_BOOTSTRAP_SERVERS_DOCKER")
+        prepared_enviroment_variables["KAFKA_TOPIC"] = job.iot_data_kafka_topic
+        prepared_enviroment_variables["KAFKA_BOOTSTRAP_SERVERS_DOCKER"] = KAFKA_BOOTSTRAP_SERVERS_DOCKER
+    except AttributeError as e:
+        print(f"AttributeError: {e}")
         prepared_enviroment_variables = {}
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        prepared_enviroment_variables = {}
+    # Load the remaining enviroment variables from the DB and add them in the dictionary
+    try:
         for enviroment_variable in enviroment_variables:
             prepared_enviroment_variables[enviroment_variable.variable_name] = enviroment_variable.variable_value
     except TypeError:
+        print(f"TypeError: {e} - Check if 'enviroment_variables' is iterable.")
+        prepared_enviroment_variables = {}
+    except AttributeError as e:
+        print(f"AttributeError: {e} - Check if 'enviroment_variable' has the correct attributes.")
         prepared_enviroment_variables = {}
 
-    # Load all the values into a context dict
-    context = {
-        "operation": operation,
-        "container_image_name": container_image_name,
-        "number_of_containers": number_of_containers,
+    # Prepare the container memory limit string. DB stores the value in MB as an integer.
+    # Example 2000m for 2000 MB or 2 GB
+    container_memory_limit_in_mb = f"{str(job.container_memory_limit_in_mb)}m"
+    timestamp = time.time()
+
+    # Prepare the job instuction data as a dictionary
+    job_instruction_data = {
+        "operation": "create",
+        "container_image_name": job.container_image_name,
+        "number_of_containers": job.container_number,
         "resource_limits": {
-            "cpu": container_cpu_limit,
-            "memory": container_memory_limit
+            "cpu": job.container_cpu_limit,
+            "memory": container_memory_limit_in_mb
         },
         "environment_variables": prepared_enviroment_variables,
         "metadata": {
-            "user": user,
-            "job_id": job_id,
-            "timestamp": timestamp,
-            "description": job_description,
-            "computation_duration_in_seconds": computation_duration_in_seconds,
+            "user": "user",
+            "job_id": str(job.id),
+            "timestamp": timestamp, 
+            "description": "This job generates temperature data for IoT simulation.", # Placeholder, will be replaced with the job description
+            "computation_duration_in_seconds": job.computation_duration_in_seconds
         }
     }
 
-    # Load the jinja2 template
-    TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'message_templates')
-
-    # Create a Jinja2 environment that loads templates from 'message_templates'
-    env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
-
-    # Get your Jinja2 template file
-    template = env.get_template('job_instructions.j2')
-    rendered_message = template.render(context)
-
-    return rendered_message
+    return job_instruction_data
 

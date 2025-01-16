@@ -2,7 +2,7 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from .models import Job
-from . import services
+from .services.common_service import json_serial_date_time
 
 class JobConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -41,4 +41,4 @@ class JobConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'job_list',
             'jobs': jobs
-        }, default=services.json_serial_date_time))
+        }, default=json_serial_date_time))

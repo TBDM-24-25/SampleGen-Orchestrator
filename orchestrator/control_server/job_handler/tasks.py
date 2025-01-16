@@ -1,36 +1,42 @@
-from time import sleep
 from celery import shared_task
-from .services import render_job_instruction_message
+from .services.common_service import render_job_instruction_message
 from .models import EnviromentVariable
-from orchestrator.services.kafka_service import KafkaService
-from orchestrator.services.logger_service import GlobalLogger
-from orchestrator.services.avro_service import AvroService
-from orchestrator.services.schema_registry_service import SchemaRegistryService
+from .services.kafka_service import KafkaService
+from .services.logger_service import GlobalLogger
+from .services.avro_service import AvroService
+from .services.schema_registry_service import SchemaRegistryService
+import os
+from datetime import datetime
 
 @shared_task
 def start_job_task(job):
     """sets up the job data and submits the job to the kafka topic"""
-    # sleep(10)
-    print(f"job with id {job.id} has started")
-
-    # Render the job instruction message
+    # Get job to be deployed
     enviroment_variables = EnviromentVariable.objects.filter(job=job)
-    rendered_message = render_job_instruction_message(
-        operation="create",
-        container_image_name=job.container_image_name,
-        number_of_containers=job.container_number,
-        container_cpu_limit=job.container_cpu_limit,
-        container_memory_limit=job.container_memory_limit_in_mb,
-        enviroment_variables=enviroment_variables,
-        user="test_user",
-        job_id=job.id,
-        timestamp=job.updated_at,
-        job_description="This is a test job",
-        computation_duration_in_seconds=job.computation_duration_in_seconds,
-    )
-    print(rendered_message)
+    job_instruction_message = render_job_instruction_message(job, enviroment_variables)
 
-    # Submit the job to the Kafka topic with avro schema validation
-    # This is a placeholder for the actual Kafka submission
+    # Construct the path to the job_handling.avsc file
+    current_dir = os.path.dirname(__file__)
+    schema_path = os.path.join(current_dir, '..', '..', '..', 'schemes', 'job_handling.avsc')
+
+    # Open and read the schema file
+    with open(schema_path, 'r') as f:
+        job_handling_schema_str = f.read()
+        
+    schema_registry_client = SchemaRegistryService().get_client()
+    job_handling_avro_serializer = AvroService(schema_registry_client, job_handling_schema_str).get_avro_serializer()
+
+    kafka_service = KafkaService(group_id='job_status_consumers')
+
+    topic_name = 'Job_Instruction'
+    try:
+        kafka_service.send_message(topic_name, job_instruction_message, job_handling_avro_serializer)
+        print(f"Job {job.id} submitted to Kafka topic")
+        timestamp = job_instruction_message["metadata"]["timestamp"]
+        # refactor from time to datetime format
+        job.kafka_timestamp = datetime.fromtimestamp(timestamp)
+        job.save()
+    except RuntimeError as e:
+        print(f"Error sending message: {e}")
 
 

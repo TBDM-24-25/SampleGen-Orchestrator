@@ -6,3 +6,4 @@ kafka-data/
 .env
 orchestrator/control_server/db.sqlite3
 orchestrator/control_server/redis_celery_data/
+.DS_Store

@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 
 # Create your models here.
 class Agent(models.Model):
+    docker_agent_id = models.CharField(max_length=200)
     status = models.CharField(max_length=200)
     kafka_timestamp = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)

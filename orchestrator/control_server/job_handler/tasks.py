@@ -1,5 +1,5 @@
 from celery import shared_task
-from .services.common_service import render_job_instruction_message
+from .services.common_service import render_job_instruction_message, update_agent_status
 from .models import EnviromentVariable
 from .services.kafka_service import KafkaService
 from .services.logger_service import GlobalLogger
@@ -61,17 +61,25 @@ def stop_job(job):
 @shared_task
 def monitor_agent_status():
     """monitors the agents in the database and updates the status of the agents"""
-    kafka_service = KafkaService(group_id='agent_status_consumers')
-    topic_name = 'Agent_Status'
+    try:
+        kafka_service = KafkaService(group_id='agent_status_consumers')
+        topic_name = 'Agent_Status'
 
-    schema_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'schemes', 'agent_status.avsc')
-    with open(schema_path, 'r') as f:
-        agent_status_schema_str = f.read()
+        schema_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'schemes', 'agent_status.avsc')
+        with open(schema_path, 'r') as f:
+            agent_status_schema_str = f.read()
 
-    schema_registry_client = SchemaRegistryService().get_client()
-    agent_status_avro_serializer = AvroService(schema_registry_client, agent_status_schema_str).get_avro_deserializer()
+        schema_registry_client = SchemaRegistryService().get_client()
+        agent_status_avro_serializer = AvroService(schema_registry_client, agent_status_schema_str).get_avro_deserializer()
+        # receive messages from kafka topic with avro serialization with confluent_kafka
+        kafka_service.consume_messages(
+            topic_names=[topic_name],
+            message_handler=update_agent_status,
+            avro_deserializer=agent_status_avro_serializer
+        )
+    except Exception as e:
+        print(f"Error monitoring agent status: {e}")
 
-    # receive messages from kafka topic with avro serialization with confluent_kafka
 
 @shared_task
 def monitor_job_status():

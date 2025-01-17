@@ -1,8 +1,10 @@
 from datetime import date, datetime
 from jinja2 import Environment, FileSystemLoader
 from dotenv import load_dotenv
+from ..models import Agent
 import os
 import time
+
 
 
 def json_serial_date_time(obj):
@@ -61,4 +63,15 @@ def render_job_instruction_message(job, enviroment_variables):
     }
 
     return job_instruction_data
+
+
+def update_agent_status(message: dict) -> None:
+    """Updates the agent status in the database according to the received Kafka message from the Agent_Status topic."""
+    # TODO: To check if the operation field has the value heartbeat is currently not necessary, this must be checked later
+    agent_status = message.get("status")
+    agent_id = message.get("agent_id")
+    kafka_timestamp = message.get("timestamp")
+    containers_running = message.get("containers_running")
+
+    # Get the agent instance from the database
 

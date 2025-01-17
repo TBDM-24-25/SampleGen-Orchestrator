@@ -7,6 +7,8 @@ from .services.avro_service import AvroService
 from .services.schema_registry_service import SchemaRegistryService
 import os
 from datetime import datetime
+from time import sleep
+from .models import Job
 
 @shared_task
 def start_job_task(job):
@@ -40,3 +42,63 @@ def start_job_task(job):
         print(f"Error sending message: {e}")
 
 
+@shared_task
+def stop_job(job):
+    """stops the job by sending a stop message to the kafka topic"""
+    kafka_service = KafkaService(group_id='job_status_consumers') # TODO: Check if this is the correct group_id
+    topic_name = 'Job_Instruction'
+
+    schema_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'schemes', 'job_handling.avsc')
+    with open(schema_path, 'r') as f:
+        job_handling_schema_str = f.read()
+
+    schema_registry_client = SchemaRegistryService().get_client()
+    job_handling_avro_serializer = AvroService(schema_registry_client, job_handling_schema_str).get_avro_serializer()
+
+    # send stop message to kafka topic
+
+
+@shared_task
+def monitor_agent_status():
+    """monitors the agents in the database and updates the status of the agents"""
+    kafka_service = KafkaService(group_id='agent_status_consumers')
+    topic_name = 'Agent_Status'
+
+    schema_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'schemes', 'agent_status.avsc')
+    with open(schema_path, 'r') as f:
+        agent_status_schema_str = f.read()
+
+    schema_registry_client = SchemaRegistryService().get_client()
+    agent_status_avro_serializer = AvroService(schema_registry_client, agent_status_schema_str).get_avro_deserializer()
+
+    # receive messages from kafka topic with avro serialization with confluent_kafka
+
+@shared_task
+def monitor_job_status():
+    """monitors the jobs in the database and updates the status of the jobs"""
+    kafka_service = KafkaService(group_id='job_status_consumers')
+    topic_name = 'Job_Status'
+
+    schema_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'schemes', 'job_status.avsc')
+    with open(schema_path, 'r') as f:
+        job_status_schema_str = f.read()
+
+    schema_registry_client = SchemaRegistryService().get_client()
+    job_status_avro_serializer = AvroService(schema_registry_client, job_status_schema_str).get_avro_deserializer()
+
+    # receive messages from kafka topic with avro serialization with confluent_kafka
+
+
+@shared_task
+def permanent_background_task():
+    iterator = 0
+    while iterator < 10:
+        print("This is a permanent background task that prints every 5 seconds")
+        sleep(2)
+        random_job = Job.objects.order_by('?').first()
+        print(f"Random job: {random_job.name}")
+        iterator += 1
+
+
+
+    

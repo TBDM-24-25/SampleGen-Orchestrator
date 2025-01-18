@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from dotenv import load_dotenv
 from django.utils import timezone
-from ..models import Agent
+from ..models import Agent, Job, Container
 import os
 import time
 
@@ -112,4 +112,109 @@ def update_agent_status(message: dict) -> None:
     
     # Will lead back to the process of waiting for the next message
     return
+
+def update_job_status(message: dict) -> None:
+    """
+    Updates the job status in the database according to the received Kafka message from the Job_Status topic.
+    If the job does not exist in the database, the message will be ignored. This message must handle both cases
+    start and stop job since there is no control in the KafkaConsumer commit offset.
+    """
+    try:
+        operation = message.get("operation")
+        status = message.get("status")
+        docker_container_ids = message.get("container_id")
+        meta_data = message.get("metadata")
+        job_id = meta_data.get("job_id")
+        agent_id = meta_data.get("agent_id")
+        kafka_timestamp = meta_data.get("timestamp")
+        print(f"Job status handling for job with ID {job_id} started.")
+    except AttributeError as e:
+        print(f"AttributeError: {e} - Check if the message has the correct attributes.")
+        return
     
+    if status != "successful":
+        print(f"Job with ID {job_id} failed on operation: {operation}.")
+        # TODO: Implement websocket trigger to inform the user about the failed job
+        return
+    
+    # Convert the timestamp to a timezone-aware datetime object
+    try:
+        kafka_timestamp = datetime.fromtimestamp(kafka_timestamp, tz=timezone.utc)
+    except (TypeError, ValueError) as e:
+        print(f"Error converting timestamp: {e}")
+        return
+    
+    # Update the job status in the database
+    try:
+        # Set the common attributes of the job
+        job = Job.objects.get(pk=job_id)
+        job.latest_operation = operation
+        job.kafka_timestamp = kafka_timestamp
+        print(f"Common attributes of existing Job with ID {job_id} stored in memory.")
+    except Job.DoesNotExist:
+        print(f"Job with ID {job_id} not found.")
+        return
+    except Exception as e:
+        print(f"Error updating job: {e}")
+        return
+
+    # Update the job and the corresponding entities according to the operation
+    if operation == "create":
+        update_started_job(job, agent_id, docker_container_ids)
+    elif operation == "stop":
+        update_stopped_job(job)
+    else:
+        print(f"Unknown operation: {operation}")
+        return
+    
+    print(f"Job status handling for job with ID {job.id} completed.")
+
+    return
+
+
+def update_started_job(job, agent_id, docker_container_ids):
+    # Update the job
+    try:
+        job.agent = Agent.objects.get(docker_agent_id=agent_id)
+        job.updated_at = datetime.now()
+        job.save()
+        print(f"Job with ID {job.id} updated with agent ID {agent_id}.")
+    except Agent.DoesNotExist:
+        print(f"Agent with ID {agent_id} not found.")
+        return
+    except Exception as e:
+        print(f"Error updating job: {e}")
+        return
+    
+    # Create the related containers
+    try:
+        for container_id in docker_container_ids:
+            container = Container.objects.create(
+                status="running",
+                docker_container_id=container_id,
+                job=job,
+                agent=job.agent
+            )
+            container.save()
+            print(f"Container with ID {container.docker_container_id} created and stored in database.")
+        print(f"Containers for job with ID {job.id} created.")
+    except Exception as e:
+        print(f"Error creating container: {e}")
+    
+    return
+
+
+def update_stopped_job(job):
+    try:
+        job.agent = None
+        job.container_set.all().delete()
+        job.updated_at = datetime.now()
+        job.save()
+    except Exception as e:
+        print(f"Error updating stopped job: {e}")
+        return
+    
+    print(f"Job with ID {job.id} stopped.")
+
+    return
+

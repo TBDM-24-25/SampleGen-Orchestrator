@@ -1,5 +1,5 @@
 from celery import shared_task
-from .services.common_service import render_job_instruction_message, update_agent_status
+from .services.common_service import render_job_instruction_message, update_agent_status, update_job_status
 from .models import EnviromentVariable
 from .services.kafka_service import KafkaService
 from .services.logger_service import GlobalLogger
@@ -41,7 +41,7 @@ def start_job_task(job):
     except RuntimeError as e:
         print(f"Error sending message: {e}")
 
-
+# TODO: This function must be completed
 @shared_task
 def stop_job(job):
     """stops the job by sending a stop message to the kafka topic"""
@@ -84,29 +84,35 @@ def monitor_agent_status():
 @shared_task
 def monitor_job_status():
     """monitors the jobs in the database and updates the status of the jobs"""
-    kafka_service = KafkaService(group_id='job_status_consumers')
-    topic_name = 'Job_Status'
+    try:
+        kafka_service = KafkaService(group_id='job_status_consumers')
+        topic_name = 'Job_Status'
 
-    schema_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'schemes', 'job_status.avsc')
-    with open(schema_path, 'r') as f:
-        job_status_schema_str = f.read()
+        schema_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'schemes', 'job_status.avsc')
+        with open(schema_path, 'r') as f:
+            job_status_schema_str = f.read()
 
-    schema_registry_client = SchemaRegistryService().get_client()
-    job_status_avro_serializer = AvroService(schema_registry_client, job_status_schema_str).get_avro_deserializer()
+        schema_registry_client = SchemaRegistryService().get_client()
+        job_status_avro_serializer = AvroService(schema_registry_client, job_status_schema_str).get_avro_deserializer()
 
-    # receive messages from kafka topic with avro serialization with confluent_kafka
+        # receive messages from kafka topic with avro serialization with confluent_kafka
+        kafka_service.consume_messages(
+            topic_names=[topic_name],
+            message_handler=update_job_status,
+            avro_deserializer=job_status_avro_serializer
+        )
+    except Exception as e:
+        print(f"Error monitoring job status: {e}")
 
 
+# TODO: This function must be completed
 @shared_task
-def permanent_background_task():
-    iterator = 0
-    while iterator < 10:
-        print("This is a permanent background task that prints every 5 seconds")
-        sleep(2)
-        random_job = Job.objects.order_by('?').first()
-        print(f"Random job: {random_job.name}")
-        iterator += 1
-
-
-
-    
+def orchestrate_finished_jobs():
+    """orchestrates the finished jobs by sending a stop message to the kafka topic"""
+    try:
+        # Get all jobs that are finished
+        finished_jobs = Job.objects.filter(status='finished')
+        for job in finished_jobs:
+            stop_job(job)
+    except Exception as e:
+        print(f"Error orchestrating finished jobs: {e}") 

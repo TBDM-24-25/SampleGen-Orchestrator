@@ -2,7 +2,7 @@
 "operation": "{{ operation }}", {# either create or delete #}
 "status": "{{ status }}", {# either successful or unsucessful #}
 "container_image_name": "{{ container_image_name }}",
-"container_id": "{{ container_id }}", {# list of started container(s) #}
+"container_id": {{ container_id | tojson }}, {# list of started container(s) #}
 "metadata": {
     "job_id": "{{ job_id }}",
     "agent_id": "{{ agent_id }}", {# set globally, callable in template #}

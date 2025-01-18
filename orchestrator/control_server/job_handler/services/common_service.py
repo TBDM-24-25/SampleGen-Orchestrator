@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from dotenv import load_dotenv
 from django.utils import timezone
-from ..models import Agent, Job, Container
+from ..models import Agent, Job, JobStatus, Container, ContainerStatus
 import os
 import time
 
@@ -177,6 +177,7 @@ def update_started_job(job, agent_id, docker_container_ids):
     try:
         job.agent = Agent.objects.get(docker_agent_id=agent_id)
         job.updated_at = datetime.now()
+        job.status = JobStatus.RUNNING
         job.save()
         print(f"Job with ID {job.id} updated with agent ID {agent_id}.")
     except Agent.DoesNotExist:
@@ -190,7 +191,7 @@ def update_started_job(job, agent_id, docker_container_ids):
     try:
         for container_id in docker_container_ids:
             container = Container.objects.create(
-                status="running",
+                status=ContainerStatus.RUNNING,
                 docker_container_id=container_id,
                 job=job,
                 agent=job.agent
@@ -207,6 +208,7 @@ def update_started_job(job, agent_id, docker_container_ids):
 def update_stopped_job(job):
     try:
         job.agent = None
+        job.status = JobStatus.COMPLETED
         job.container_set.all().delete()
         job.updated_at = datetime.now()
         job.save()

@@ -8,7 +8,7 @@ from .services.schema_registry_service import SchemaRegistryService
 import os
 from datetime import datetime
 from time import sleep
-from .models import Job
+from .models import Job, JobStatus
 
 @shared_task
 def start_job_task(job):
@@ -37,6 +37,7 @@ def start_job_task(job):
         timestamp = job_instruction_message["metadata"]["timestamp"]
         # refactor from time to datetime format
         job.kafka_timestamp = datetime.fromtimestamp(timestamp)
+        job.status = JobStatus.DEPLOYING
         job.save()
     except RuntimeError as e:
         print(f"Error sending message: {e}")

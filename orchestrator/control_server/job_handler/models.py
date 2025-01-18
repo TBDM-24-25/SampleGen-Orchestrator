@@ -11,10 +11,19 @@ class Agent(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 
+class JobStatus(models.TextChoices):
+    CREATED = 'created', 'Created'
+    DEPLOYING = 'deploying', 'Deploying'
+    RUNNING = 'running', 'Running'
+    COMPLETED = 'completed', 'Completed'
+    FAILED = 'failed', 'Failed'
+
+
 class Job(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(max_length=500)
     latest_operation = models.CharField(max_length=200)
+    status = models.CharField(max_length=10, choices=JobStatus.choices, default=JobStatus.CREATED)
     container_image_name = models.CharField(max_length=200)
     container_number = models.IntegerField(default=1)
     container_cpu_limit = models.FloatField(null=False, default=0.3)
@@ -24,7 +33,7 @@ class Job(models.Model):
     kafka_timestamp = models.DateTimeField(null=True)
     agent = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)   
+    updated_at = models.DateTimeField(auto_now=True)
 
     def clean(self):
         """Validate the model fields."""
@@ -61,6 +70,9 @@ class EnviromentVariable(models.Model):
     job = models.ForeignKey(Job, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+class ContainerStatus(models.TextChoices):
+    RUNNING = 'running', 'Running'
 
 
 class Container(models.Model):

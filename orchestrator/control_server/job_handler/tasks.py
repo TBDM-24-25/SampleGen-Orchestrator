@@ -1,5 +1,5 @@
 from celery import shared_task
-from .services.common_service import render_job_instruction_message, update_agent_status, update_job_status
+from .services.common_service import render_start_job_instruction_message, render_stop_job_instruction_message, update_agent_status, update_job_status
 from .models import EnviromentVariable
 from .services.kafka_service import KafkaService
 from .services.logger_service import GlobalLogger
@@ -11,11 +11,12 @@ from time import sleep
 from .models import Job, JobStatus
 
 @shared_task
-def start_job_task(job):
+def start_job_task(job_id):
     """sets up the job data and submits the job to the kafka topic"""
+    job = Job.objects.get(pk=job_id)
     # Get job to be deployed
     enviroment_variables = EnviromentVariable.objects.filter(job=job)
-    job_instruction_message = render_job_instruction_message(job, enviroment_variables)
+    job_instruction_message = render_start_job_instruction_message(job, enviroment_variables)
 
     # Construct the path to the job_handling.avsc file
     current_dir = os.path.dirname(__file__)
@@ -33,7 +34,7 @@ def start_job_task(job):
     topic_name = 'Job_Instruction'
     try:
         kafka_service.send_message(topic_name, job_instruction_message, job_handling_avro_serializer)
-        print(f"Job {job.id} submitted to Kafka topic")
+        print(f"Job {job.id} sent to Kafka topic")
         timestamp = job_instruction_message["metadata"]["timestamp"]
         # refactor from time to datetime format
         job.kafka_timestamp = datetime.fromtimestamp(timestamp)
@@ -42,21 +43,46 @@ def start_job_task(job):
     except RuntimeError as e:
         print(f"Error sending message: {e}")
 
-# TODO: This function must be completed
-@shared_task
-def stop_job(job):
-    """stops the job by sending a stop message to the kafka topic"""
-    kafka_service = KafkaService(group_id='job_status_consumers') # TODO: Check if this is the correct group_id
-    topic_name = 'Job_Instruction'
 
-    schema_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'schemes', 'job_handling.avsc')
+@shared_task
+def stop_job_task(job_id):
+    """stops the job by sending a stop message to the kafka topic"""
+    job = Job.objects.get(pk=job_id)
+    print(f"Starting process of stopping job with ID {job.id}")
+    # Job must be running to be stopped
+    if job.status != JobStatus.RUNNING:
+        print(f"Job {job.id} is not running, cannot stop")
+        return
+    
+    stop_job_instruction_message = render_stop_job_instruction_message(job)
+    print(f"Succesfully rendered Stop message: {stop_job_instruction_message}")
+    # Construct the path to the job_handling.avsc file
+    current_dir = os.path.dirname(__file__)
+    schema_path = os.path.join(current_dir, '..', '..', '..', 'schemes', 'job_handling.avsc')
+
+    # Open and read the schema file
     with open(schema_path, 'r') as f:
         job_handling_schema_str = f.read()
-
+        
     schema_registry_client = SchemaRegistryService().get_client()
     job_handling_avro_serializer = AvroService(schema_registry_client, job_handling_schema_str).get_avro_serializer()
 
-    # send stop message to kafka topic
+    kafka_service = KafkaService(group_id='job_status_consumers')
+
+    topic_name = 'Job_Instruction'
+    try:
+        print(f"Start sending stop message to Kafka topic")
+        kafka_service.send_message(topic_name, stop_job_instruction_message, job_handling_avro_serializer)
+        print(f"Job {job.id} stop message sent to Kafka topic")
+        timestamp = stop_job_instruction_message["metadata"]["timestamp"]
+        # refactor from time to datetime format
+        job.kafka_timestamp = datetime.fromtimestamp(timestamp)
+        job.save()
+        print(f"Job with ID {job.id} successfully submitted to Kafka topic")
+    except RuntimeError as e:
+        print(f"Error sending stop message: {e}")
+    
+    return
 
 
 @shared_task
@@ -114,6 +140,33 @@ def orchestrate_finished_jobs():
         # Get all jobs that are finished
         finished_jobs = Job.objects.filter(status='finished')
         for job in finished_jobs:
-            stop_job(job)
+            # stop_job(job)
+            pass
     except Exception as e:
-        print(f"Error orchestrating finished jobs: {e}") 
+        print(f"Error orchestrating finished jobs: {e}")
+
+
+# TODO: This function must be completed
+@shared_task
+def iot_data_subscription_sheduling_task():
+    """schedules the iot data subscription task to run every 5 seconds"""
+    while True:
+        print("Subscribing to IoT data")
+        sleep(5)
+        # iot_data_subscription_task()
+
+
+# TODO: This function must be completed
+@shared_task
+def iot_data_subscription_task():
+    """subscribes to the iot data and sends the data to the kafka topic"""
+    try:
+        # Get iot data
+        iot_data = []
+        # create input directory and file for the iot data
+        # subscribe to the iot data topic and pass function to consume_messages to handle the data
+        # TODO: modify the consume_message function with an exit condition
+        # You must adapt all other functions accordingly that already use the consume_messages function
+        pass
+    except Exception as e:
+        print(f"Error subscribing to iot data: {e}")

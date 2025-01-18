@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Job, EnviromentVariable, Container
+from .models import Job, EnviromentVariable, Container, JobStatus
 from .forms import JobForm, EnviromentVariableForm, BaseEnviromentVariableFormset
 from django.forms import modelformset_factory
 from django.http import Http404
@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-from .tasks import start_job_task
+from .tasks import start_job_task, stop_job_task
 
 
 
@@ -108,6 +108,9 @@ def create_job(request):
 @require_http_methods(["DELETE"])
 def delete_job(request, job_id):
     job = get_object_or_404(Job, pk=job_id)
+    if job.status == JobStatus.RUNNING or job.status == JobStatus.DEPLOYING:
+        return JsonResponse({'status': 'error', 'message': 'Job is running, stop it before deleting'})
+    
     job.delete()
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
@@ -122,6 +125,17 @@ def delete_job(request, job_id):
 @require_http_methods(["POST"])
 def start_job(request, job_id):
     # Call service that is asynchronly starting jobs
-    job = Job.objects.get(pk=job_id)
-    start_job_task(job)
-    return JsonResponse({'status': 'job started', "data": "job started"})
+    job = get_object_or_404(Job, pk=job_id)
+    start_job_task.delay(job.id)
+    return JsonResponse({'status': 'in_progress', "data": "job start request sent. Waiting for confirmation"})
+
+
+@require_http_methods(["POST"])
+def stop_job(request, job_id):
+    job = get_object_or_404(Job, pk=job_id)
+
+    if job.status != JobStatus.RUNNING:
+        return JsonResponse({'status': 'error', 'message': 'Job is not running, cannot stop'})
+    
+    stop_job_task.delay(job.id)
+    return JsonResponse({'status': 'in_progress', "data": "job stop request sent. Waiting for confirmation"})

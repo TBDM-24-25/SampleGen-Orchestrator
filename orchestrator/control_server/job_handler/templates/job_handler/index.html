@@ -90,6 +90,7 @@
             const jobActionsCell = document.createElement('td');
             jobActionsCell.innerHTML = `
                 <button class="btn btn-success btn-sm me-2" onclick="startJob(${job.id})">Start</button>
+                <button class="btn btn-warning btn-sm me-2" onclick="stopJob(${job.id})">Stop</button>
                 <button class="btn btn-danger btn-sm" onclick="deleteJob(${job.id})">Delete</button>
             `;
             jobRow.appendChild(jobActionsCell);
@@ -129,5 +130,26 @@
             console.error('Error deleting job:', error);
         });
     }
+
+    function stopJob(jobId) {
+    fetch(`/job_handler/stop_job/${jobId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Job stopped:', data);
+        if (data.status === 'success') {
+            alert(data.message);
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error stopping job:', error);
+    });
+}
 </script>
 {% endblock %}

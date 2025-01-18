@@ -13,7 +13,7 @@ def json_serial_date_time(obj):
         return obj.isoformat()
     raise TypeError("Type %s not serializable" % type(obj))
 
-def render_job_instruction_message(job, enviroment_variables):
+def render_start_job_instruction_message(job, enviroment_variables):
     # Prepare dictionary with enviroment variables. The KAFKA_TOPIC and KAFKA_BOOTSTRAP_SERVERS_DOCKER are required
     load_dotenv()
     prepared_enviroment_variables = {}
@@ -63,6 +63,45 @@ def render_job_instruction_message(job, enviroment_variables):
     }
 
     return job_instruction_data
+
+
+def render_stop_job_instruction_message(job):
+    """Prepares the stop job instruction message as a dictionary.
+    The message contains the following parameters: operation, number_of_containers, job_id, container_image_name, container_id (all the containers related to the job, represented as a json array)
+    The parameters: user, timestamp, description, computation_duration_in_seconds are also included in the metadata field for logging purposes in the container_handler and consistency."""
+    
+    # The timestamp is also provided in the stop job instruction message
+    timestamp = time.time()
+
+    # Prepare the job instuction data as a dictionary
+    try:
+        job_stop_instruction_data = {
+            "operation": "delete",
+            "container_image_name": job.container_image_name,
+            "number_of_containers": job.container_number,
+            "resource_limits": {
+                "cpu": job.container_cpu_limit,
+                "memory": f"{job.container_memory_limit_in_mb}m"
+            },
+            "environment_variables": {},
+            "metadata": {
+                "user": "user",
+                "job_id": str(job.id),
+                "timestamp": timestamp, 
+                "description": job.description,
+                "computation_duration_in_seconds": job.computation_duration_in_seconds,
+                "container_id": [container.docker_container_id for container in job.container_set.all()],
+                "agent_id": job.agent.docker_agent_id
+            }
+        }
+    except AttributeError as e:
+        print(f"AttributeError: {e} - Check if the job and the related containers have the correct attributes.")
+        job_stop_instruction_data = {} 
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        job_stop_instruction_data = {}
+
+    return job_stop_instruction_data
 
 
 def update_agent_status(message: dict) -> None:
@@ -161,7 +200,7 @@ def update_job_status(message: dict) -> None:
     # Update the job and the corresponding entities according to the operation
     if operation == "create":
         update_started_job(job, agent_id, docker_container_ids)
-    elif operation == "stop":
+    elif operation == "delete":
         update_stopped_job(job)
     else:
         print(f"Unknown operation: {operation}")

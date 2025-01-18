@@ -22,6 +22,8 @@ kafka_service = KafkaService(group_id='Job_Consumers')
 
 # agent_id based on the MAC address of host machine
 agent_id = get_mac_address()
+logger.info('Starting Container Handler with Agent ID %s', agent_id)
+print(f'Starting Container Handler with Agent ID {agent_id}')
 
 # provide jinja2 environment
 environment = Environment(loader=FileSystemLoader("templates/"))
@@ -274,7 +276,8 @@ def delete_containers(
         try:
             container = docker_client.containers.get(container_id)
             container.kill()
-            logger.info('Container %s/%s with Image %s has been successfully stopped, Container ID: %s',
+            container.remove()
+            logger.info('Container %s/%s with Image %s has been successfully stopped and removed, Container ID: %s',
                         index + 1, number_of_containers, container_image_name, container_id)
 
             containers_deleted.append(container_id)

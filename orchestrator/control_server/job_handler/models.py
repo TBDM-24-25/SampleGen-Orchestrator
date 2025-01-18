@@ -65,6 +65,7 @@ class EnviromentVariable(models.Model):
 
 class Container(models.Model):
     status = models.CharField(max_length=200)
+    docker_container_id = models.CharField(max_length=200)
     job = models.ForeignKey(Job, on_delete=models.CASCADE)
     agent = models.ForeignKey(Agent, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)

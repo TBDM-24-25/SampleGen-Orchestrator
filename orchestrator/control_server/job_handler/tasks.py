@@ -7,8 +7,10 @@ from .services.avro_service import AvroService
 from .services.schema_registry_service import SchemaRegistryService
 import os
 from datetime import datetime
+from django.utils import timezone
 from time import sleep
 from .models import Job, JobStatus
+from datetime import timedelta
 
 @shared_task
 def start_job_task(job_id):
@@ -37,7 +39,7 @@ def start_job_task(job_id):
         print(f"Job {job.id} sent to Kafka topic")
         timestamp = job_instruction_message["metadata"]["timestamp"]
         # refactor from time to datetime format
-        job.kafka_timestamp = datetime.fromtimestamp(timestamp)
+        job.kafka_timestamp = datetime.fromtimestamp(timestamp, tz=timezone.utc)
         job.status = JobStatus.DEPLOYING
         job.save()
     except RuntimeError as e:
@@ -55,7 +57,6 @@ def stop_job_task(job_id):
         return
     
     stop_job_instruction_message = render_stop_job_instruction_message(job)
-    print(f"Succesfully rendered Stop message: {stop_job_instruction_message}")
     # Construct the path to the job_handling.avsc file
     current_dir = os.path.dirname(__file__)
     schema_path = os.path.join(current_dir, '..', '..', '..', 'schemes', 'job_handling.avsc')
@@ -76,7 +77,7 @@ def stop_job_task(job_id):
         print(f"Job {job.id} stop message sent to Kafka topic")
         timestamp = stop_job_instruction_message["metadata"]["timestamp"]
         # refactor from time to datetime format
-        job.kafka_timestamp = datetime.fromtimestamp(timestamp)
+        job.kafka_timestamp = datetime.fromtimestamp(timestamp, tz=timezone.utc)
         job.save()
         print(f"Job with ID {job.id} successfully submitted to Kafka topic")
     except RuntimeError as e:
@@ -132,18 +133,42 @@ def monitor_job_status():
         print(f"Error monitoring job status: {e}")
 
 
-# TODO: This function must be completed
-@shared_task
-def orchestrate_finished_jobs():
-    """orchestrates the finished jobs by sending a stop message to the kafka topic"""
-    try:
-        # Get all jobs that are finished
-        finished_jobs = Job.objects.filter(status='finished')
-        for job in finished_jobs:
-            # stop_job(job)
-            pass
-    except Exception as e:
-        print(f"Error orchestrating finished jobs: {e}")
+    
+# @shared_task
+# def job_stop_scheduler_task():
+#     print("Starting job stop scheduler task")
+#     """orchestrates the finished jobs by sending a stop message to the kafka topic"""
+#     while True:
+#         sleep(5)
+#         jobs = Job.objects.filter(status=JobStatus.RUNNING)
+    
+#         if not jobs:
+#             continue
+
+#         for job in jobs:
+#             try:
+#                 # get time parameters
+#                 current_time = timezone.now()
+#                 job_start_time = job.kafka_timestamp
+#                 computation_duration = job.computation_duration_in_seconds
+#                 job_end_time = job_start_time + timedelta(seconds=computation_duration)
+                
+#                 # Ensure both datetime objects are timezone-aware
+#                 if timezone.is_naive(job_end_time):
+#                     job_end_time = timezone.make_aware(job_end_time)
+                
+#                 # check if the job has run for the specified duration
+#                 if current_time >= job_end_time:
+#                     print(f"Job {job.id} has run for the specified duration")
+#                     print(f"Stopping job {job.id}")
+#                     # Stop the job
+#                     stop_job_task.delay(job.id)
+#             except Exception as e:
+#                 print(f"Error stopping job {job.id}: {e}")
+#                 continue
+
+
+
 
 
 # TODO: This function must be completed

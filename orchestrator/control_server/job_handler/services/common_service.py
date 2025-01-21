@@ -215,7 +215,7 @@ def update_started_job(job, agent_id, docker_container_ids):
     # Update the job
     try:
         job.agent = Agent.objects.get(docker_agent_id=agent_id)
-        job.updated_at = datetime.now()
+        job.updated_at = datetime.now(tz=timezone.utc)
         job.status = JobStatus.RUNNING
         job.save()
         print(f"Job with ID {job.id} updated with agent ID {agent_id}.")
@@ -249,7 +249,7 @@ def update_stopped_job(job):
         job.agent = None
         job.status = JobStatus.COMPLETED
         job.container_set.all().delete()
-        job.updated_at = datetime.now()
+        job.updated_at = datetime.now(tz=timezone.utc)
         job.save()
     except Exception as e:
         print(f"Error updating stopped job: {e}")

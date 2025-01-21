@@ -10,3 +10,4 @@ class JobHandlerConfig(AppConfig):
             # celery_app.send_task('job_handler.tasks.permanent_background_task')
             celery_app.send_task('job_handler.tasks.monitor_agent_status')
             celery_app.send_task('job_handler.tasks.monitor_job_status')
+            # celery_app.send_task('job_handler.tasks.job_stop_scheduler_task')

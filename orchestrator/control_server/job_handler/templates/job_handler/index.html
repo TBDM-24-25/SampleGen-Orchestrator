@@ -149,19 +149,21 @@
     }
 
     function deleteJob(jobId) {
-        fetch(`/job_handler/delete_job/${jobId}/`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRFToken': csrftoken,
-            },
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Job deleted:', data);
-        })
-        .catch(error => {
-            console.error('Error deleting job:', error);
-        });
+        if (confirm('Are you sure you want to delete this job?')) {
+            fetch(`/job_handler/delete_job/${jobId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Job deleted:', data);
+            })
+            .catch(error => {
+                console.error('Error deleting job:', error);
+            });
+        }
     }
 
     function stopJob(jobId) {
@@ -174,9 +176,7 @@
     .then(response => response.json())
     .then(data => {
         console.log('Job stopped:', data);
-        if (data.status === 'success') {
-            alert(data.message);
-        } else {
+        if (data.status !== 'success') {
             alert(data.message);
         }
     })

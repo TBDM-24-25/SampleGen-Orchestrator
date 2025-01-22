@@ -151,7 +151,7 @@ def automatic_job_stop_task():
         try:
             # get time parameters
             current_time = timezone.now()
-            job_start_time = job.kafka_timestamp
+            job_start_time = job.updated_at
             computation_duration = job.computation_duration_in_seconds
             job_end_time = job_start_time + timedelta(seconds=computation_duration)
             

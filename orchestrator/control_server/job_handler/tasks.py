@@ -134,64 +134,36 @@ def monitor_job_status():
 
 
     
-# @shared_task
-# def job_stop_scheduler_task():
-#     print("Starting job stop scheduler task")
-#     """orchestrates the finished jobs by sending a stop message to the kafka topic"""
-#     while True:
-#         sleep(5)
-#         jobs = Job.objects.filter(status=JobStatus.RUNNING)
-    
-#         if not jobs:
-#             continue
-
-#         for job in jobs:
-#             try:
-#                 # get time parameters
-#                 current_time = timezone.now()
-#                 job_start_time = job.kafka_timestamp
-#                 computation_duration = job.computation_duration_in_seconds
-#                 job_end_time = job_start_time + timedelta(seconds=computation_duration)
-                
-#                 # Ensure both datetime objects are timezone-aware
-#                 if timezone.is_naive(job_end_time):
-#                     job_end_time = timezone.make_aware(job_end_time)
-                
-#                 # check if the job has run for the specified duration
-#                 if current_time >= job_end_time:
-#                     print(f"Job {job.id} has run for the specified duration")
-#                     print(f"Stopping job {job.id}")
-#                     # Stop the job
-#                     stop_job_task.delay(job.id)
-#             except Exception as e:
-#                 print(f"Error stopping job {job.id}: {e}")
-#                 continue
-
-
-
-
-
-# TODO: This function must be completed
 @shared_task
-def iot_data_subscription_sheduling_task():
-    """schedules the iot data subscription task to run every 5 seconds"""
-    while True:
-        print("Subscribing to IoT data")
-        sleep(5)
-        # iot_data_subscription_task()
+def automatic_job_stop_task():
+    print("Starting job stop scheduler task")
+    """orchestrates the finished jobs by sending a stop message to the kafka topic"""
+    # Get all jobs that are running
+    jobs = Job.objects.filter(status=JobStatus.RUNNING)
 
+    if not jobs:
+        print("No running jobs")
+        return
 
-# TODO: This function must be completed
-@shared_task
-def iot_data_subscription_task():
-    """subscribes to the iot data and sends the data to the kafka topic"""
-    try:
-        # Get iot data
-        iot_data = []
-        # create input directory and file for the iot data
-        # subscribe to the iot data topic and pass function to consume_messages to handle the data
-        # TODO: modify the consume_message function with an exit condition
-        # You must adapt all other functions accordingly that already use the consume_messages function
-        pass
-    except Exception as e:
-        print(f"Error subscribing to iot data: {e}")
+    for job in jobs:
+        try:
+            # get time parameters
+            current_time = timezone.now()
+            job_start_time = job.kafka_timestamp
+            computation_duration = job.computation_duration_in_seconds
+            job_end_time = job_start_time + timedelta(seconds=computation_duration)
+            
+            # Ensure both datetime objects are timezone-aware
+            if timezone.is_naive(job_end_time):
+                job_end_time = timezone.make_aware(job_end_time)
+            
+            # check if the job has run for the specified duration
+            if current_time >= job_end_time:
+                # Stop the job
+                stop_job_task.delay(job.id)
+        except Exception as e:
+            print(f"Error stopping job {job.id}: {e}")
+            continue
+    print("Finished job stop scheduler task")
+    return
+

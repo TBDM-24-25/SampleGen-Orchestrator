@@ -149,4 +149,11 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_ROUTES = {
+    'job_handler.tasks.start_job_task': {'queue': 'manual_job_handling'},
+    'job_handler.tasks.stop_job_task': {'queue': 'manual_job_handling'},
+    'job_handler.tasks.automatic_job_stop_task': {'queue': 'beat'},
+    'job_handler.tasks.monitor_agent_status': {'queue': 'monitor_agent_status'},
+    'job_handler.tasks.monitor_job_status': {'queue': 'monitor_job_status'},
+}
 

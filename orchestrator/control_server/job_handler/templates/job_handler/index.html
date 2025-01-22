@@ -158,6 +158,12 @@
             })
             .then(response => response.json())
             .then(data => {
+                const operationStatus = data.status
+                if (operationStatus === 'success') {
+                    alert(data.message);
+                } else {
+                    alert(data.message);
+                }
                 console.log('Job deleted:', data);
             })
             .catch(error => {

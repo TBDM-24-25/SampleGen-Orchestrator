@@ -110,6 +110,41 @@ With the provided [Docker Compose File](./kafka/docker-compose.yaml), the instal
 ### 3.3) Job Handler
 @Leandro
 
+Boot instructions:
+
+Open four seperate shell sessions
+
+Shell Sessions
+
+1:
+
+Redis instances with docker compose
+```bash
+cd orchestrator/control_server_project && docker-compose up -d
+```
+
+2:
+
+Celery Beat
+```bash
+cd orchestrator/control_server_project && celery -A control_server_project beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+```
+
+3:
+
+Celery Worker
+```bash
+cd orchestrator/control_server_project && celery -A control_server_project worker --loglevel=info
+```
+
+4:
+
+Django Server
+```bash
+cd orchestrator/control_server_project && python manage.py runserver
+```
+
+
 ### 3.4) Container Handler (Agent)
 To start up an instance of the Container Handler (Agent), proceed as follows:
 1. Start the Container Handler (Agent) by performing the subsequent command and (optional) check the

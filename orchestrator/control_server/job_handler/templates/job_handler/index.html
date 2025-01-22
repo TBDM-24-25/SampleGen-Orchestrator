@@ -9,8 +9,13 @@
         <table class="table table-striped table-hover">
             <thead class="thead-dark">
                 <tr>
-                    <th scope="col">Job Name</th>
+                    <th scope="col" style="width: 15%;">Job Name</th>
+                    <th scope="col">Status</th>
                     <th scope="col">Latest Operation</th>
+                    <th scope="col">Container Image</th>
+                    <th scope="col">Containers</th>
+                    <th scope="col">Duration in Seconds</th>
+                    <th scope="col">Kafka Topic</th>
                     <th scope="col">Actions</th>
                 </tr>
             </thead>
@@ -76,6 +81,7 @@
             const jobRow = document.createElement('tr');
             jobRow.setAttribute('data-job-id', job.id);
 
+            // Job name
             const jobNameCell = document.createElement('td');
             const jobNameLink = document.createElement('a');
             jobNameLink.href = `/job_handler/job_detail/${job.id}/`; // Set the href to the detail view URL
@@ -83,10 +89,37 @@
             jobNameCell.appendChild(jobNameLink);
             jobRow.appendChild(jobNameCell);
 
+            // Job status
+            const jobStatusCell = document.createElement('td');
+            jobStatusCell.textContent = job.status;
+            jobRow.appendChild(jobStatusCell);
+
+            // Latest operation
             const jobOperationCell = document.createElement('td');
             jobOperationCell.textContent = job.latest_operation;
             jobRow.appendChild(jobOperationCell);
 
+            // Container image
+            const jobContainerImageCell = document.createElement('td');
+            jobContainerImageCell.textContent = job.container_image_name;
+            jobRow.appendChild(jobContainerImageCell);
+
+            // Number of containers
+            const jobNumberOfContainersCell = document.createElement('td');
+            jobNumberOfContainersCell.textContent = job.container_number;
+            jobRow.appendChild(jobNumberOfContainersCell);
+
+            // Container computation time in seconds
+            const jobComputationDuration = document.createElement('td');
+            jobComputationDuration.textContent = job.computation_duration_in_seconds;
+            jobRow.appendChild(jobComputationDuration);
+
+            // Job IoT kafka topic
+            const jobIoTKafkaTopicCell = document.createElement('td');
+            jobIoTKafkaTopicCell.textContent = job.iot_data_kafka_topic;
+            jobRow.appendChild(jobIoTKafkaTopicCell);
+
+            // Action Cell including the start, stop, and delete button
             const jobActionsCell = document.createElement('td');
             jobActionsCell.innerHTML = `
                 <button class="btn btn-success btn-sm me-2" onclick="startJob(${job.id})">Start</button>

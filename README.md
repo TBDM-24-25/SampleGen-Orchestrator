@@ -108,42 +108,63 @@ With the provided [Docker Compose File](./kafka/docker-compose.yaml), the instal
 
 
 ### 3.3) Job Handler
-@Leandro
+@Leandro: Write a introduction for the job handler
+#### Architecture
+#### Features
+#### 3.3.1) Development server boot instructions
+To set up and run the development environment for the Job Handler service application, follow the steps below. The application relies on multiple components running in parallel, including a Django server, Celery workers, and Redis. Ensure all prerequisites, such as Python, Redis, and Celery, are installed and configured before proceeding.
 
-Boot instructions:
-
-Open four seperate shell sessions
-
-Shell Sessions
-
-1:
-
-Redis instances with docker compose
+##### Step 1: Start Redis with Docker Compose
+Redis is required as the message broker for Celery. Use Docker Compose to start the Redis instance:
 ```bash
 cd orchestrator/control_server_project && docker-compose up -d
 ```
+This command will spin up two Redis in a containers.
+1. Redis container: enabling asynchronous parallelized web sockets and consumer groups with Django Channels
+2. Redis container: serving celery workers. The Broker  and the Result Backend use two seperate Databases
+Detach the process by adding the flag "-d", allowing you to continue working in the same terminal.
 
-2:
-
-Celery Beat
-```bash
-cd orchestrator/control_server_project && celery -A control_server_project beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
-```
-
-3:
-
-Celery Worker
-```bash
-cd orchestrator/control_server_project && celery -A control_server_project worker --loglevel=info
-```
-
-4:
-
-Django Server
+##### Step 2: Start the Django Development Server
+The Django development server handles the main web application:
 ```bash
 cd orchestrator/control_server_project && python manage.py runserver
 ```
+This command starts the server at the default address: http://127.0.0.1:8000/job_handler or localhost:8000/job_handler.
 
+##### Step 3: Start Celery Workers
+Celery workers handle various tasks in parallel. Start separate workers for each queue:
+
+1. Worker for manual job handling:
+```bash
+cd orchestrator/control_server_project && celery -A control_server_project worker --queues manual_job_handling --loglevel=info
+```
+
+2. Worker for Celery Beat tasks
+```bash
+cd orchestrator/control_server_project && celery -A control_server_project worker --queues beat --loglevel=info
+```
+
+3. Worker for monitoring agent status
+```bash
+cd orchestrator/control_server_project && celery -A control_server_project worker --queues monitor_agent_status --loglevel=info
+```
+
+4. Worker for monitoring job status
+```bash
+cd orchestrator/control_server_project && celery -A control_server_project worker --queues monitor_job_status --loglevel=info
+```
+
+##### Step 4: Start the Celery Beat Scheduler
+Celery Beat schedules periodic tasks for the application to achieve automatec container orchestration. Start the Beat scheduler using the following command:
+```bash
+cd orchestrator/control_server_project && celery -A control_server_project beat --loglevel=info
+```
+
+##### Notes
+Each command should run in its own terminal window or session to ensure all processes operate concurrently.
+For efficiency during development, you can use tools like tmux or screen to manage multiple terminal sessions in one window.
+With all services running, the development environment will be fully operational. You can access the application, submit tasks, and monitor progress as intended. For production, containerize the entire environment with Docker Compose as outlined in the deployment instructions.
+#### Production deployment
 
 ### 3.4) Container Handler (Agent)
 To start up an instance of the Container Handler (Agent), proceed as follows:

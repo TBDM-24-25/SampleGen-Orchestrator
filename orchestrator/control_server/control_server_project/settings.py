@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'job_handler.apps.JobHandlerConfig',
     'bootstrap5',
+    'django_celery_beat',
 ]
 
 MIDDLEWARE = [

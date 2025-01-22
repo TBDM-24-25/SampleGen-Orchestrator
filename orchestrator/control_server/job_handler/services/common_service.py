@@ -1,6 +1,8 @@
 from datetime import date, datetime
 from dotenv import load_dotenv
 from django.utils import timezone
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 from ..models import Agent, Job, JobStatus, Container, ContainerStatus
 import os
 import time
@@ -143,6 +145,8 @@ def update_agent_status(message: dict) -> None:
             print(f"Agent with ID {agent.docker_agent_id} created and stored in database.")
         else:
             print(f"Agent with ID {agent.docker_agent_id} updated.")
+
+        send_update_to_job_consumer_group()
     except Exception as e:
         print(f"Error updating or creating agent: {e}")
         return
@@ -236,6 +240,7 @@ def update_started_job(job, agent_id, docker_container_ids):
                 agent=job.agent
             )
             container.save()
+            send_update_to_job_consumer_group()
             print(f"Container with ID {container.docker_container_id} created and stored in database.")
         print(f"Containers for job with ID {job.id} created.")
     except Exception as e:
@@ -251,6 +256,7 @@ def update_stopped_job(job):
         job.container_set.all().delete()
         job.updated_at = datetime.now(tz=timezone.utc)
         job.save()
+        send_update_to_job_consumer_group()
     except Exception as e:
         print(f"Error updating stopped job: {e}")
         return
@@ -259,3 +265,14 @@ def update_stopped_job(job):
 
     return
 
+def send_update_to_job_consumer_group():
+    """Sends a message to the Job_Status topic to trigger the update of the job status in the database."""
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        "jobs", # Group name
+        {
+            "type": "fetch.jobs", # Method to invoke
+        }
+    )
+
+    return

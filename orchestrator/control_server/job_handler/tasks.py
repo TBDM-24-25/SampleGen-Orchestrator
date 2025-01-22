@@ -1,5 +1,5 @@
 from celery import shared_task
-from .services.common_service import render_start_job_instruction_message, render_stop_job_instruction_message, update_agent_status, update_job_status
+from .services.common_service import render_start_job_instruction_message, render_stop_job_instruction_message, update_agent_status, update_job_status, send_update_to_job_consumer_group
 from .models import EnviromentVariable
 from .services.kafka_service import KafkaService
 from .services.logger_service import GlobalLogger
@@ -42,6 +42,7 @@ def start_job_task(job_id):
         job.kafka_timestamp = datetime.fromtimestamp(timestamp, tz=timezone.utc)
         job.status = JobStatus.DEPLOYING
         job.save()
+        send_update_to_job_consumer_group()
     except RuntimeError as e:
         print(f"Error sending message: {e}")
 
@@ -79,6 +80,7 @@ def stop_job_task(job_id):
         # refactor from time to datetime format
         job.kafka_timestamp = datetime.fromtimestamp(timestamp, tz=timezone.utc)
         job.save()
+        send_update_to_job_consumer_group()
         print(f"Job with ID {job.id} successfully submitted to Kafka topic")
     except RuntimeError as e:
         print(f"Error sending stop message: {e}")

@@ -16,6 +16,9 @@ from datetime import timedelta
 def start_job_task(job_id):
     """sets up the job data and submits the job to the kafka topic"""
     job = Job.objects.get(pk=job_id)
+    if job.status == JobStatus.RUNNING or job.status == JobStatus.DEPLOYING:
+        print(f"Job {job.id} is already running or deploying")
+        return
     # Get job to be deployed
     enviroment_variables = EnviromentVariable.objects.filter(job=job)
     job_instruction_message = render_start_job_instruction_message(job, enviroment_variables)

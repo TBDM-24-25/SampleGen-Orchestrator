@@ -6,9 +6,9 @@ from confluent_kafka.serialization import SerializationContext, MessageField
 from confluent_kafka.schema_registry.avro import AvroSerializer, AvroDeserializer
 
 from .config import KafkaConfig
-from .logger_service import GlobalLogger
+from .common_service import get_global_logger
 
-logger = GlobalLogger.get_logger()
+logger = get_global_logger()
 
 class KafkaService:
 

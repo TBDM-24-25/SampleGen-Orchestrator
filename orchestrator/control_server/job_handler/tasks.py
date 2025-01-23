@@ -11,13 +11,18 @@ from django.utils import timezone
 from time import sleep
 from .models import Job, JobStatus
 from datetime import timedelta
+from .services.common_service import get_global_logger
+
 
 @shared_task
 def start_job_task(job_id):
     """sets up the job data and submits the job to the kafka topic"""
+    logger = get_global_logger()
+
+    logger.info(f"Starting process of deploying job with ID {job_id}")
     job = Job.objects.get(pk=job_id)
     if job.status == JobStatus.RUNNING or job.status == JobStatus.DEPLOYING:
-        print(f"Job {job.id} is already running or deploying")
+        logger.warning(f"Job with ID {job.id} is already running or deploying")
         return
     # Get job to be deployed
     enviroment_variables = EnviromentVariable.objects.filter(job=job)
@@ -39,25 +44,28 @@ def start_job_task(job_id):
     topic_name = 'Job_Instruction'
     try:
         kafka_service.send_message(topic_name, job_instruction_message, job_handling_avro_serializer)
-        print(f"Job {job.id} sent to Kafka topic")
+        logger.info(f"Job with ID {job.id} successfully submitted to Kafka topic")
         timestamp = job_instruction_message["metadata"]["timestamp"]
         # refactor from time to datetime format
         job.kafka_timestamp = datetime.fromtimestamp(timestamp, tz=timezone.utc)
         job.status = JobStatus.DEPLOYING
         job.save()
+        logger.info(f"Job with ID {job.id} status updated to DEPLOYING and timestamp updated")
         send_update_to_job_consumer_group()
     except RuntimeError as e:
-        print(f"Error sending message: {e}")
+        logger.error(f"Error sending message: {e}")
 
 
 @shared_task
 def stop_job_task(job_id):
     """stops the job by sending a stop message to the kafka topic"""
+    logger = get_global_logger()
+
+    logger.info(f"Starting process of stopping job with ID {job_id}")
     job = Job.objects.get(pk=job_id)
-    print(f"Starting process of stopping job with ID {job.id}")
     # Job must be running to be stopped
     if job.status != JobStatus.RUNNING:
-        print(f"Job {job.id} is not running, cannot stop")
+        logger.warning(f"Job with ID {job.id} is not running, cannot stop")
         return
     
     stop_job_instruction_message = render_stop_job_instruction_message(job)
@@ -76,17 +84,17 @@ def stop_job_task(job_id):
 
     topic_name = 'Job_Instruction'
     try:
-        print(f"Start sending stop message to Kafka topic")
         kafka_service.send_message(topic_name, stop_job_instruction_message, job_handling_avro_serializer)
-        print(f"Job {job.id} stop message sent to Kafka topic")
         timestamp = stop_job_instruction_message["metadata"]["timestamp"]
         # refactor from time to datetime format
         job.kafka_timestamp = datetime.fromtimestamp(timestamp, tz=timezone.utc)
         job.save()
+        logger.info(f"Job with ID {job.id} status updated to STOPPING and timestamp updated")
+
         send_update_to_job_consumer_group()
-        print(f"Job with ID {job.id} successfully submitted to Kafka topic")
+        logger.info(f"Job with ID {job.id} successfully submitted to Kafka topic with delete operation")
     except RuntimeError as e:
-        print(f"Error sending stop message: {e}")
+        logger.error(f"Error sending stop message: {e}")
     
     return
 
@@ -94,6 +102,9 @@ def stop_job_task(job_id):
 @shared_task
 def monitor_agent_status():
     """monitors the agents in the database and updates the status of the agents"""
+    logger = get_global_logger()
+
+    logger.info("Starting agent status monitoring task")
     try:
         kafka_service = KafkaService(group_id='agent_status_consumers')
         topic_name = 'Agent_Status'
@@ -111,12 +122,15 @@ def monitor_agent_status():
             avro_deserializer=agent_status_avro_serializer
         )
     except Exception as e:
-        print(f"Error monitoring agent status: {e}")
+        logger.error(f"Error monitoring agent status: {e}")
 
 
 @shared_task
 def monitor_job_status():
     """monitors the jobs in the database and updates the status of the jobs"""
+    logger = get_global_logger()
+
+    logger.info("Starting job status monitoring task")
     try:
         kafka_service = KafkaService(group_id='job_status_consumers')
         topic_name = 'Job_Status'
@@ -135,19 +149,19 @@ def monitor_job_status():
             avro_deserializer=job_status_avro_serializer
         )
     except Exception as e:
-        print(f"Error monitoring job status: {e}")
+        logger.error(f"Error monitoring job status: {e}")
 
 
     
 @shared_task
 def automatic_job_stop_task():
-    print("Starting job stop scheduler task")
     """orchestrates the finished jobs by sending a stop message to the kafka topic"""
+    logger = get_global_logger()
+
     # Get all jobs that are running
     jobs = Job.objects.filter(status=JobStatus.RUNNING)
 
     if not jobs:
-        print("No running jobs")
         return
 
     for job in jobs:
@@ -166,9 +180,10 @@ def automatic_job_stop_task():
             if current_time >= job_end_time:
                 # Stop the job
                 stop_job_task.delay(job.id)
+                logger.info(f"Job with ID {job.id} has run for the specified duration and job stop request triggered")
         except Exception as e:
-            print(f"Error stopping job {job.id}: {e}")
+            logger.error(f"Error stopping job {job.id}: {e}")
             continue
-    print("Finished job stop scheduler task")
+        
     return
 

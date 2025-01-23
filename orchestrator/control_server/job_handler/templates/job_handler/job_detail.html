@@ -11,22 +11,54 @@
             </div>
             <div class="card-body">
                 <h5 class="card-title">{{ job.name }}</h5>
-                <p class="card-text"><strong>Latest Operation:</strong> {{ job.latest_operation }}</p>
+                <p class="card-text"><strong>Status</strong></p>
+                <p class="card-text">{{ job.status }}</p>
+                <p class="card-text"><strong>Container Image Name</strong></p>
+                <p class="card-text">{{ job.container_image_name }}</p>
+                <p class="card-text"><strong>Container Resource Limits</strong></p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="card-text"><strong>CPU</strong> {{ job.container_cpu_limit }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="card-text"><strong>Memory</strong> {{ job.container_memory_limit_in_mb }} MB</p>
+                    </div>
+                </div>
+                <p class="card-text"><strong></strong></p>
+                <p class="card-text"><strong>Computation Duration</strong></p>
+                <p class="card-text">{{ job.computation_duration_in_seconds }} Seconds</p>
+                <p class="card-text"><strong>IoT data kafka topic</strong></p>
+                <p class="card-text">{{ job.iot_data_kafka_topic }}</p>
+                <p class="card-text"><strong>Description</strong></p>
+                <p class="card-text">{{ job.description }}</p>
             </div>
         </div>
 
         <div class="card mb-4">
             <div class="card-header">
-                Environment Variables
+            Environment Variables
             </div>
             <div class="card-body">
-                <ul class="list-group">
+            {% if not enviroment_variables %}
+                <p class="card-text">No environment variables set for this job.</p>
+            {% else %}
+                <table class="table">
+                <thead>
+                    <tr>
+                    <th scope="col">Variable Name</th>
+                    <th scope="col">Variable Value</th>
+                    </tr>
+                </thead>
+                <tbody>
                     {% for env_var in enviroment_variables %}
-                        <li class="list-group-item">
-                            <strong>{{ env_var.variable_name }}:</strong> {{ env_var.variable_value }}
-                        </li>
+                    <tr>
+                        <td>{{ env_var.variable_name }}</td>
+                        <td>{{ env_var.variable_value }}</td>
+                    </tr>
                     {% endfor %}
-                </ul>
+                </tbody>
+                </table>
+            {% endif %}
             </div>
         </div>
 
@@ -38,14 +70,13 @@
                 {% if agent %}
                     <ul class="list-group">
                         <li class="list-group-item">
-                            <strong>Status:</strong> {{ agent.status }}<br>
-                            <strong>Kafka Timestamp:</strong> {{ agent.kafka_timestamp }}<br>
-                            <strong>Created At:</strong> {{ agent.created_at }}<br>
-                            <strong>Updated At:</strong> {{ agent.updated_at }}
+                            <strong>Agent ID</strong> {{ agent.docker_agent_id }}<br>
+                            <strong>Status</strong> {{ agent.status }}<br>
+                            <strong>Kafka Timestamp</strong> {{ agent.kafka_timestamp }}<br>
                         </li>
                     </ul>
                 {% else %}
-                    <p class="card-text">No agent deployed for this job.</p>
+                    <p class="card-text">Job is not deployed on an agent</p>
                 {% endif %}
             </div>
         </div>
@@ -59,15 +90,13 @@
                     <ul class="list-group">
                         {% for container in containers %}
                             <li class="list-group-item">
-                                <strong>Status:</strong> {{ container.status }}<br>
-                                <strong>Agent:</strong> {{ container.agent.status }}<br>
-                                <strong>Created At:</strong> {{ container.created_at }}<br>
-                                <strong>Updated At:</strong> {{ container.updated_at }}
+                                <strong>Container ID</strong> {{ container.docker_container_id }}<br>
+                                <strong>Status</strong> {{ container.status }}<br>
                             </li>
                         {% endfor %}
                     </ul>
                 {% else %}
-                    <p class="card-text">No containers associated with this job.</p>
+                    <p class="card-text">Job is not running. No containers associated with this job.</p>
                 {% endif %}
             </div>
         </div>

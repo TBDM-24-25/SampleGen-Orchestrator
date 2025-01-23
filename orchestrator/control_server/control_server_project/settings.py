@@ -131,6 +131,48 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 ASGI_APPLICATION = "control_server_project.asgi.application"
 
+# Logging configuration
+import os
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '%(asctime)s %(levelname)s %(module)s - %(funcName)s: %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+        'simple': {
+            'format': '%(levelname)s %(message)s',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs/app.log'),
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': False,  # Disable propagation to avoid duplicate logs
+        },
+        'global_logger': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': False,  # Disable propagation to avoid duplicate logs
+        },
+    },
+}
+
 # Django Channels backend configuration
 CHANNEL_LAYERS = {
     "default": {

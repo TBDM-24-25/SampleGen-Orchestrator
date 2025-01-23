@@ -158,10 +158,6 @@ With the provided [Docker Compose File](./kafka/docker-compose.yaml), the instal
 
 
 ### 3.3) Job Handler
-@Leandro: Write a introduction for the job handler
-#### Architecture
-#### Features
-#### 3.3.1) Development server boot instructions
 To set up and run the development environment for the Job Handler service application, follow the steps below. The application relies on multiple components running in parallel, including a Django server, Celery workers, and Redis. Ensure all prerequisites, such as Python, Redis, and Celery, are installed and configured before proceeding.
 
 ##### Step 1: Start Redis with Docker Compose
@@ -211,11 +207,12 @@ Celery Beat schedules periodic tasks for the application to achieve automatec co
 cd orchestrator/control_server/ && celery -A control_server_project beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
 ```
 
+Once all the services are running, you can access the application at http://127.0.0.1:8000/job_handler or localhost:8000/job_handler.
+
 ##### Notes
 Each command should run in its own terminal window or session to ensure all processes operate concurrently.
 For efficiency during development, you can use tools like tmux or screen to manage multiple terminal sessions in one window.
 With all services running, the development environment will be fully operational. You can access the application, submit tasks, and monitor progress as intended. For production, containerize the entire environment with Docker Compose as outlined in the deployment instructions.
-#### Production deployment
 
 ### 3.4) Container Handler (Agent)
 To start up an instance of the Container Handler (Agent), proceed as follows:

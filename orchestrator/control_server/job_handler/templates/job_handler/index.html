@@ -11,7 +11,6 @@
                 <tr>
                     <th scope="col" style="width: 15%;">Job Name</th>
                     <th scope="col">Status</th>
-                    <th scope="col">Latest Operation</th>
                     <th scope="col">Container Image</th>
                     <th scope="col">Containers</th>
                     <th scope="col">Duration in Seconds</th>
@@ -83,6 +82,8 @@
 
             // Job name
             const jobNameCell = document.createElement('td');
+            jobNameCell.classList.add('text-center');
+            jobNameCell.style.verticalAlign = 'middle';
             const jobNameLink = document.createElement('a');
             jobNameLink.href = `/job_handler/job_detail/${job.id}/`; // Set the href to the detail view URL
             jobNameLink.textContent = job.name;
@@ -91,41 +92,61 @@
 
             // Job status
             const jobStatusCell = document.createElement('td');
+            jobStatusCell.classList.add('text-center');
+            jobStatusCell.style.verticalAlign = 'middle';
             jobStatusCell.textContent = job.status;
             jobRow.appendChild(jobStatusCell);
 
-            // Latest operation
-            const jobOperationCell = document.createElement('td');
-            jobOperationCell.textContent = job.latest_operation;
-            jobRow.appendChild(jobOperationCell);
-
             // Container image
             const jobContainerImageCell = document.createElement('td');
+            jobContainerImageCell.classList.add('text-center');
+            jobContainerImageCell.style.verticalAlign = 'middle';
             jobContainerImageCell.textContent = job.container_image_name;
             jobRow.appendChild(jobContainerImageCell);
 
             // Number of containers
             const jobNumberOfContainersCell = document.createElement('td');
+            jobNumberOfContainersCell.classList.add('text-center');
+            jobNumberOfContainersCell.style.verticalAlign = 'middle';
             jobNumberOfContainersCell.textContent = job.container_number;
             jobRow.appendChild(jobNumberOfContainersCell);
 
             // Container computation time in seconds
             const jobComputationDuration = document.createElement('td');
+            jobComputationDuration.classList.add('text-center');
+            jobComputationDuration.style.verticalAlign = 'middle';
             jobComputationDuration.textContent = job.computation_duration_in_seconds;
             jobRow.appendChild(jobComputationDuration);
 
             // Job IoT kafka topic
             const jobIoTKafkaTopicCell = document.createElement('td');
+            jobIoTKafkaTopicCell.classList.add('text-center');
+            jobIoTKafkaTopicCell.style.verticalAlign = 'middle';
             jobIoTKafkaTopicCell.textContent = job.iot_data_kafka_topic;
             jobRow.appendChild(jobIoTKafkaTopicCell);
 
             // Action Cell including the start, stop, and delete button
             const jobActionsCell = document.createElement('td');
+            jobActionsCell.classList.add('text-center');
+            // center jobActionCell content vertically
+            jobActionsCell.style.verticalAlign = 'middle';
             jobActionsCell.innerHTML = `
-                <button class="btn btn-success btn-sm me-2" onclick="startJob(${job.id})">Start</button>
-                <button class="btn btn-warning btn-sm me-2" onclick="stopJob(${job.id})">Stop</button>
-                <button class="btn btn-danger btn-sm" onclick="deleteJob(${job.id})">Delete</button>
-            `;
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <button class="btn btn-success btn-sm mb-2" onclick="startJob(${job.id})">Start</button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <button class="btn btn-warning btn-sm mb-2" onclick="stopJob(${job.id})">Stop</button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <button class="btn btn-danger btn-sm mb-2" onclick="deleteJob(${job.id})">Delete</button>
+                </div>
+            </div>
+        `;
             jobRow.appendChild(jobActionsCell);
 
             jobList.appendChild(jobRow);
@@ -141,6 +162,9 @@
         })
         .then(response => response.json())
         .then(data => {
+            if (data.status !== 'success') {
+                alert(data.message);
+            }
             console.log('Job started:', data);
         })
         .catch(error => {

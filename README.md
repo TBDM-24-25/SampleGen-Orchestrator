@@ -171,14 +171,26 @@ This command will spin up two Redis in a containers.
 
 Detach the process by adding the flag "-d", allowing you to continue working in the same terminal.
 
-##### Step 2: Start the Django Development Server
+##### Step 2: Install dependencies
+Install the required Python dependencies for the Django application:
+```bash
+cd orchestrator/control_server/ && python -m pip install -r requirements.txt
+```
+
+##### Step 3: Apply Django Migrations
+Apply the Django migrations to create the database schema:
+```bash
+cd orchestrator/control_server/ && python manage.py migrate
+```
+
+##### Step 4: Start the Django Development Server
 The Django development server handles the main web application:
 ```bash
 cd orchestrator/control_server/ && python manage.py runserver
 ```
 This command starts the server at the default address: http://127.0.0.1:8000/job_handler or localhost:8000/job_handler.
 
-##### Step 3: Start Celery Workers
+##### Step 5: Start Celery Workers
 Celery workers handle various tasks in parallel. Start separate workers for each queue:
 
 1. Worker for manual job handling:
@@ -201,7 +213,7 @@ cd orchestrator/control_server/ && celery -A control_server_project worker --que
 cd orchestrator/control_server/ && celery -A control_server_project worker --queues monitor_job_status --loglevel=info
 ```
 
-##### Step 4: Start the Celery Beat Scheduler
+##### Step 6: Start the Celery Beat Scheduler
 Celery Beat schedules periodic tasks for the application to achieve automatec container orchestration. Start the Beat scheduler using the following command:
 ```bash
 cd orchestrator/control_server/ && celery -A control_server_project beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler

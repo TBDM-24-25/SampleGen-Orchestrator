@@ -119,15 +119,18 @@ def delete_job(request, job_id):
             "type": "fetch.jobs", # Method to invoke
         }
     )
-    return JsonResponse({'status': 'Job deleted'})
+    return JsonResponse({'status': 'Job deleted', 'message': 'Job successfully deleted'})
 
 
 @require_http_methods(["POST"])
 def start_job(request, job_id):
     # Call service that is asynchronly starting jobs
     job = get_object_or_404(Job, pk=job_id)
+    if job.status == JobStatus.RUNNING or job.status == JobStatus.DEPLOYING:
+        return JsonResponse({'status': 'error', 'message': 'Job is already running or deploying'})
+    
     start_job_task.delay(job.id)
-    return JsonResponse({'status': 'in_progress', "data": "job start request sent. Waiting for confirmation"})
+    return JsonResponse({'status': 'in_progress', "message": "job start request sent. Waiting for confirmation"})
 
 
 @require_http_methods(["POST"])
@@ -138,4 +141,4 @@ def stop_job(request, job_id):
         return JsonResponse({'status': 'error', 'message': 'Job is not running, cannot stop'})
     
     stop_job_task.delay(job.id)
-    return JsonResponse({'status': 'in_progress', "data": "job stop request sent. Waiting for confirmation"})
+    return JsonResponse({'status': 'in_progress', "message": "job stop request sent. Waiting for confirmation"})

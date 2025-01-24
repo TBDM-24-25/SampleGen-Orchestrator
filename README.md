@@ -27,21 +27,71 @@ To allow the framework to orchestrate the necessary processes, the three managem
 2) **Kafka Schema Registry**: Repository (centralized) for management and validation of schemes for message data that supports serialization and deserialization. The schema registry takes on a key role en ensuring data consistency and compatibility, especially as schemes evolve.<br>
 The DCF uses Apache Avro as the serialization format. The three different Avro schemes 1) [Job Handling](./schemes/job_handling.avsc), 2) [Job Status](./schemes/job_status.avsc) and 3) [Agent Status](./schemes/agent_status.avsc) are defined and go hand in hand with the topics described above.
 3) **Docker Daemon**: Service responsible for orchestrating container lifecycle management. It handles tasks such as container creation, execution, deletion and monitoring required to fulfil the jobs submitted.
-4) **Job Handler**: @Leandro, GUI + Business Logic
+4) **Job Handler**: Service responsible for managing and orchestrating containerized jobs. It is a system consisting of a web server, Celery workers, Kafka, and the database to ensure efficient job orchestration. The application provides a user-friendly interface for creating, monitoring, and managing jobs, along with real-time updates using Django Channels and web sockets.
 As the Job Handler (Agent) plays a crucial role within the framework, it will be described in more detail in [Section 2.2](#22-job-handler).
 5) **Container Handler (Agent)**: Agent, which is responsible for starting/stopping containers and providing a monitoring capabilities for processing jobs submitted via the GUI. As the Container Handler (Agent) plays a crucial role within the framework, it will be described in more detail in [Section 2.3](#23-container-handler-agent).
 6) **Data Generator(s)**: Docker containers that generate and expose sample data to a chosen/defined Kafka topic. As the logic for generating data is out of scope, the focus is on configuring the data generator containers to fit into the DCF. For this, [Section 3.5](#35-preparation-of-docker-containers) can be consulted.
 
 The graphical representation of the DCF architecture and the interactions between the six different components can be found in the Figure 01 below:
 ![image](docs/images/architecture_overview.png)
+
 *Figure 01: Architecture Overview*
 
 ### 2.2) Job Handler
-@Leandro
+The Job Handler is a critical component in the SampleGen Orchestrator System and comparable to an orchestration server or control node of a container orchestrator. The Job Handler is a robust and scalable application designed to manage and orchestrate containerized jobs. The application is responsible for managing the lifecycle of jobs, including their creation, execution, monitoring, and termination. It interacts with various other components such as the web server, Celery workers, Kafka, and the database to ensure efficient job orchestration. It leverages Django for the web server, Celery for task management, and Kafka for message brokering. The application provides a user-friendly interface for creating, monitoring, and managing jobs, along with real-time updates using Django Channels and web sockets.
+
+#### Features
+The Job Handler provides the following features:
+1. **User-friendly interface**: The Job Handler provides a user-friendly interface for creating, monitoring, and managing jobs. Users can easily create new jobs, monitor the status of running jobs, and manage job lifecycles.
+2. **Job orchestration**: The Job Handler manages the lifecycle of jobs, including their creation, execution, monitoring, and termination. It ensures that jobs are executed efficiently and reliably.
+3. **Real-time updates**: The Job Handler provides real-time updates to users using Django Channels and web sockets. Users can see live updates of job status and other information.
+4. **Scalability**: The Job Handler is designed to be scalable, allowing it to handle multiple concurrent jobs and users. It can distribute tasks across multiple Celery workers and manage job orchestration efficiently.
+5. **Reliability**: The Job Handler is designed to be reliable, ensuring that jobs are executed correctly and that users receive accurate information about job status.
+6. **Monitoring**: The Job Handler provides monitoring capabilities for agents and jobs, allowing users to track the status of running jobs and agents in real-time.
+7. **Job scheduling**: The Job Handler supports job scheduling, allowing users to schedule jobs to run for specific durations. Users can monitor the computation duration in seconds for jobs and monitor job progress by observing the job status in the UI.
+8. **Logging**: Like the Container Handler, the Job Handler implements the two custom loggers "django" and "global_logger" for logging to the console and to a file. The Django logger is used for the webserver and global logger for backend components. The loggers are configured via the Django settings file. They report to the console and to a file in the logs directory of the django project.
+
+#### Architecture
+The architecture of the SampleGen-Orchestrator is designed to ensure scalability, reliability, and maintainability. The key components of the architecture include:
+1. **Django**: Serves as the web framework, handling HTTP requests, rendering templates, and managing the database.
+2. **Celery**: Manages asynchronous tasks and concurrency. this includes asynchronous tasks such as starting and stopping jobs, periodic tasks like monitoring job run lifecycles, and permanent tasks like observing agents and jobs.
+3. **Kafka**: Acts as the message broker, facilitating communication between different the Job Handler and Container Handler (comparable to a worker node).
+4. **Django Channels**: Enables real-time communication using WebSockets, providing live updates to the user interface.
+5. **Redis**: Used as the backend for Django Channels and Celery, providing fast in-memory data storage.
+6. **SQlite**: Currently SQlite is used as the primary database for storing job, agent, and container information (includes further data models). For production, it is recommended to use a more robust database like PostgreSQL.
 
 The graphical representation of the Job Handler architecture and the interactions necessary can be found in the Figure 02 below:
-![image](docs/images/job_handler.png)
+![image](docs/images/control_server_architecture_model.png)
+
 *Figure 02: Architecture Overview Job Handler*
+
+##### Django web server
+Django serves as a web server enabling a userfriendly experience for the user to manage and deploy jobs.
+The web server is responsible for handling HTTP requests, rendering templates, and managing the database. Besides the Job orchestration forwarding to the Celery Workers, the web server is responsible for the CRUD operations and first level of validation. Furthermore, the web server is the central configuration unit for Channels and Celery.
+
+##### Django Channel consumer
+The Channel consumer implements a consumer group and websocket for the frontend. The backend components web server and Celery Workers communicate with the Channel consumer to update the user in the frontend. The backend components reach the clients via the consumer group.
+
+##### Celery Workers
+The Celery Workers host independent processes (Tasks) handling the job orchestration. All Tasks are connected to the Kafka cluster to communicate with the Container Handler by consuming and producing messages for Kafka. The tasks are connected to specific Kafka topics. All tasks are running in parallel and are distributed over multiple Celery Workers. The Celery Workers are running in a distributed environment and are connected to the Redis message broker. All tasks are handling business logic independently and are manipulating the main database (SQlite).
+
+###### Job Stop Scheduler
+The Job Stop Scheduler is responsible for monitoring running jobs. If the jobs have reached their maximum computation time, Container Handler is requested to stop the jobs. The Job Stop Scheduler is producing messages to the Kafka topic Job_Instruction.
+
+###### Job Starter
+The Job starter is an asynchronous task triggered by the webserver when a user requests a job start. If job starting conditions are fulfilled, the task requests the Container Handler to start the corresponding containers. The Job Starter is producing messages to the Kafka topic Job_Instruction.
+
+###### Job Stopper
+The Job starter is an asynchronous task triggered by the webserver when a user requests a job stop. If job stopping conditions are fulfilled, the task requests the Container Handler to stop and delete the corresponding containers. The Job Stopper is as the Job Starter and Job Stop Scheduler producing messages to the Kafka topic Job_Instruction.
+
+###### Agent Monitor
+This component is responsible for monitoring the agents which have been registering themselfs to the Job Handler via Kafka. The Agent Monitor is consuming messages from the Kafka topic Agent_Status and is responsible for the Agent management.
+
+###### Job Monitor
+The Job Monitor is responsible for monitoring and managing the on the Container Handler running jobs. The Job Monitor is consuming messages from the Kafka topic Job_Status.
+
+#### Concurrency
+The job handling besides basic CRUD (no update) is handeled fully asynchronous and concurrent with Celery. The business logic (tasks) is distributed over multiple Celery Workers operating independently and concurrent. Empirical testing showed that operating all tasks on a single Celery Worker resulted in communication and performance bottlenecks. Therefore, the tasks are distributed over multiple Celery Workers and Redis message queues. The Beat Worker operates Celery Beat tasks, the Manual Job Handling Worker runs asynchronous tasks manually triggered by the users. Since the Celery Worker workload for manuel tasks is not permanent, manual tasks are combined in one Celery Worker. The Agent Monitor and Job Monitor are both operating in seperate Celery Workers since the run permanetly. 
 
 ### 2.3) Container Handler (Agent)
 In order for the Container Handler (Agent) to be able to start/stop containers and provide monitoring capabilities, several components are required - of particular interest is the Container Handler (Agent) process, which represents a multithreded environment, consisting of the following two threads:
@@ -108,7 +158,73 @@ With the provided [Docker Compose File](./kafka/docker-compose.yaml), the instal
 
 
 ### 3.3) Job Handler
-@Leandro
+To set up and run the development environment for the Job Handler service application, follow the steps below. The application relies on multiple components running in parallel, including a Django server, Celery workers, and Redis. Ensure all prerequisites, such as Python, Redis, and Celery, are installed and configured before proceeding.
+
+##### Step 1: Start Redis with Docker Compose
+Redis is required as the message broker for Celery and Django Channels. Use Docker Compose to start the Redis instance:
+```bash
+cd orchestrator/control_server/ && docker-compose up -d
+```
+This command will spin up two Redis in a containers.
+1. Redis container: enabling asynchronous parallelized web sockets and consumer groups with Django Channels
+2. Redis container: serving celery workers. The Broker  and the Result Backend use two seperate Databases
+
+Detach the process by adding the flag "-d", allowing you to continue working in the same terminal.
+
+##### Step 2: Install dependencies
+Install the required Python dependencies for the Django application:
+```bash
+cd orchestrator/control_server/ && python -m pip install -r requirements.txt
+```
+
+##### Step 3: Apply Django Migrations
+Apply the Django migrations to create the database schema:
+```bash
+cd orchestrator/control_server/ && python manage.py migrate
+```
+
+##### Step 4: Start the Django Development Server
+The Django development server handles the main web application:
+```bash
+cd orchestrator/control_server/ && python manage.py runserver
+```
+This command starts the server at the default address: http://127.0.0.1:8000/job_handler or localhost:8000/job_handler.
+
+##### Step 5: Start Celery Workers
+Celery workers handle various tasks in parallel. Start separate workers for each queue:
+
+1. Worker for manual job handling:
+```bash
+cd orchestrator/control_server/ && celery -A control_server_project worker --queues manual_job_handling --loglevel=info
+```
+
+2. Worker for Celery Beat tasks
+```bash
+cd orchestrator/control_server/ && celery -A control_server_project worker --queues beat --loglevel=info
+```
+
+3. Worker for monitoring agent status
+```bash
+cd orchestrator/control_server/ && celery -A control_server_project worker --queues monitor_agent_status --loglevel=info
+```
+
+4. Worker for monitoring job status
+```bash
+cd orchestrator/control_server/ && celery -A control_server_project worker --queues monitor_job_status --loglevel=info
+```
+
+##### Step 6: Start the Celery Beat Scheduler
+Celery Beat schedules periodic tasks for the application to achieve automatec container orchestration. Start the Beat scheduler using the following command:
+```bash
+cd orchestrator/control_server/ && celery -A control_server_project beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+```
+
+Once all the services are running, you can access the application at http://127.0.0.1:8000/job_handler or localhost:8000/job_handler.
+
+##### Notes
+Each command should run in its own terminal window or session to ensure all processes operate concurrently.
+For efficiency during development, you can use tools like tmux or screen to manage multiple terminal sessions in one window.
+With all services running, the development environment will be fully operational. You can access the application, submit tasks, and monitor progress as intended. For production, containerize the entire environment with Docker Compose as outlined in the deployment instructions.
 
 ### 3.4) Container Handler (Agent)
 To start up an instance of the Container Handler (Agent), proceed as follows:
@@ -182,10 +298,26 @@ Although the DCF is already quite powerful, it does have limitations, which will
 - **Limitation 04**: At present, the Container Handler (Agent) is subject to only one active check: the Docker Daemon Checker.
 - **Outlook 04**: In order to enhance the reliability of the Container Handler (Agent), it is possible to incorporate supplementary checks, such as those pertaining to resource availability. These checks can be simply be integrated into the Container Handler (Agent) (), (see observe_agent() and checker() within the [source code](./orchestrator/container_handler/container_handler.py)), with all other processes being managed automatically.
 
+- **Limitation 05**: The Job Handler currently uses a SQlite database. While this is sufficient for development purposes, it is not recommended for production environments.
+
+- **Outlook 05**: Future work should focus on migrating the database to a more robust solution, such as PostgreSQL. This can be achieved by adjusting the Django settings file accordingly and deploying a PostgreSQL instance.
+
+- **Limitation 06**: The Job Handler does not support scheduling jobs to run at specific times. It only supports immediate job execution and scheduling the job termination.
+
+- **Outlook 06**: Future work should focus on adding support for scheduling jobs to run at specific times. This can be achieved by adding a new field to the job model, and ModelForm to store the scheduled time and implementing a seperate the job start scheduler task which will start the job at the scheduled time.
+
+- **Limitation 07**: The Job Handler does not support user authentication and authorization. It does not have user management capabilities.
+
+- **Outlook 07**: Future work should focus on adding user authentication and authorization to the Job Handler. This can be achieved by implementing user authentication using Django's built-in authentication system and adding user management capabilities to the Job Handler.
+
+- **Limitation 08**: The SampleGen Orchestrator system is not yet fully containerized. Kafka and its components as well as the Redis instances are containerized via Docker Compose, but the Job Handler and the Container Handler are not yet containerized.
+
+- **Outlook 08**: Containerization of the Job Handler and the Container Handler using Docker is recommended. The Containerization will make it easier to deploy and scale the system in a production environment.
+
 ## 6) Licensing
 The DCF is available under the MIT [license](./LICENSE).
 
 ## 7) Contacts
 - **Christian Bieri**, Site Reliability Engineer, info@christianbieri.ch
 - **Frederico Fischer**, Frontend Engineer, fredae14@hotmail.com
-- **Leandro Hoehnen**, DevOps Engineer, exponent_stooge805@perfunc.ch
+- **Leandro Hoenen**, DevOps Engineer, exponent_stooge805@perfunc.ch

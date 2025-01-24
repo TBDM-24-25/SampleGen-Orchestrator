@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Jobs{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Jobs</h1>
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="thead-dark">
+                <tr>
+                    <th scope="col" style="width: 15%;">Job Name</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Container Image</th>
+                    <th scope="col">Containers</th>
+                    <th scope="col">Duration in Seconds</th>
+                    <th scope="col">Kafka Topic</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="job-list">
+                <!-- Job rows will be inserted here by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const socket = new WebSocket('ws://localhost:8000/ws/job/');
+
+    socket.onopen = function(e) {
+        console.log('WebSocket connection established');
+        // Request job data
+        socket.send(JSON.stringify({ type: 'fetch_jobs' }));
+    };
+
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.type === 'job_list') {
+            console.log('Received job data:', data.jobs);
+            renderJobs(data.jobs);
+        } else if (data.type === 'error') {
+            console.error('Error:', data.message);
+        }
+    };
+
+    socket.onclose = function(e) {
+        console.log('WebSocket connection closed');
+    };
+
+    socket.onerror = function(e) {
+        console.error('WebSocket error:', e);
+    };
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    const csrftoken = getCookie('csrftoken');
+
+    function renderJobs(jobs) {
+        const jobList = document.getElementById('job-list');
+        jobList.innerHTML = ''; // Clear existing jobs
+
+        jobs.forEach(job => {
+            const jobRow = document.createElement('tr');
+            jobRow.setAttribute('data-job-id', job.id);
+
+            // Job name
+            const jobNameCell = document.createElement('td');
+            jobNameCell.classList.add('text-center');
+            jobNameCell.style.verticalAlign = 'middle';
+            const jobNameLink = document.createElement('a');
+            jobNameLink.href = `/job_handler/job_detail/${job.id}/`; // Set the href to the detail view URL
+            jobNameLink.textContent = job.name;
+            jobNameCell.appendChild(jobNameLink);
+            jobRow.appendChild(jobNameCell);
+
+            // Job status
+            const jobStatusCell = document.createElement('td');
+            jobStatusCell.classList.add('text-center');
+            jobStatusCell.style.verticalAlign = 'middle';
+            jobStatusCell.textContent = job.status;
+            jobRow.appendChild(jobStatusCell);
+
+            // Container image
+            const jobContainerImageCell = document.createElement('td');
+            jobContainerImageCell.classList.add('text-center');
+            jobContainerImageCell.style.verticalAlign = 'middle';
+            jobContainerImageCell.textContent = job.container_image_name;
+            jobRow.appendChild(jobContainerImageCell);
+
+            // Number of containers
+            const jobNumberOfContainersCell = document.createElement('td');
+            jobNumberOfContainersCell.classList.add('text-center');
+            jobNumberOfContainersCell.style.verticalAlign = 'middle';
+            jobNumberOfContainersCell.textContent = job.container_number;
+            jobRow.appendChild(jobNumberOfContainersCell);
+
+            // Container computation time in seconds
+            const jobComputationDuration = document.createElement('td');
+            jobComputationDuration.classList.add('text-center');
+            jobComputationDuration.style.verticalAlign = 'middle';
+            jobComputationDuration.textContent = job.computation_duration_in_seconds;
+            jobRow.appendChild(jobComputationDuration);
+
+            // Job IoT kafka topic
+            const jobIoTKafkaTopicCell = document.createElement('td');
+            jobIoTKafkaTopicCell.classList.add('text-center');
+            jobIoTKafkaTopicCell.style.verticalAlign = 'middle';
+            jobIoTKafkaTopicCell.textContent = job.iot_data_kafka_topic;
+            jobRow.appendChild(jobIoTKafkaTopicCell);
+
+            // Action Cell including the start, stop, and delete button
+            const jobActionsCell = document.createElement('td');
+            jobActionsCell.classList.add('text-center');
+            // center jobActionCell content vertically
+            jobActionsCell.style.verticalAlign = 'middle';
+            jobActionsCell.innerHTML = `
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <button class="btn btn-success btn-sm mb-2" onclick="startJob(${job.id})">Start</button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <button class="btn btn-warning btn-sm mb-2" onclick="stopJob(${job.id})">Stop</button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <button class="btn btn-danger btn-sm mb-2" onclick="deleteJob(${job.id})">Delete</button>
+                </div>
+            </div>
+        `;
+            jobRow.appendChild(jobActionsCell);
+
+            jobList.appendChild(jobRow);
+        });
+    }
+
+    function startJob(jobId) {
+        fetch(`/job_handler/start_job/${jobId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status !== 'success') {
+                alert(data.message);
+            }
+            console.log('Job started:', data);
+        })
+        .catch(error => {
+            console.error('Error starting job:', error);
+        });
+    }
+
+    function deleteJob(jobId) {
+        if (confirm('Are you sure you want to delete this job?')) {
+            fetch(`/job_handler/delete_job/${jobId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                const operationStatus = data.status
+                if (operationStatus === 'success') {
+                    alert(data.message);
+                } else {
+                    alert(data.message);
+                }
+                console.log('Job deleted:', data);
+            })
+            .catch(error => {
+                console.error('Error deleting job:', error);
+            });
+        }
+    }
+
+    function stopJob(jobId) {
+    fetch(`/job_handler/stop_job/${jobId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Job stopped:', data);
+        if (data.status !== 'success') {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error stopping job:', error);
+    });
+}
+</script>
+{% endblock %}

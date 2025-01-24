@@ -27,6 +27,12 @@
                 <p class="card-text"><strong></strong></p>
                 <p class="card-text"><strong>Computation Duration</strong></p>
                 <p class="card-text">{{ job.computation_duration_in_seconds }} Seconds</p>
+                <p class="card-text"><strong>Inital scheduled Start Time in UTC</strong></p>
+                {% if job.computation_start_time %}
+                    <p class="card-text">{{ job.computation_start_time }}</p>
+                {% else %}
+                    <p class="card-text">No Schedule set</p>
+                {% endif %}
                 <p class="card-text"><strong>IoT data kafka topic</strong></p>
                 <p class="card-text">{{ job.iot_data_kafka_topic }}</p>
                 <p class="card-text"><strong>Description</strong></p>

@@ -10,7 +10,7 @@ class JobForm(ModelForm):
     class Meta:
         # TODO: Add memory limit field
         model = Job
-        fields = ["name", "description", "container_image_name", "container_number", "container_cpu_limit", "container_memory_limit_in_mb", "computation_duration_in_seconds", "iot_data_kafka_topic"]
+        fields = ["name", "description", "container_image_name", "container_number", "container_cpu_limit", "container_memory_limit_in_mb", "computation_duration_in_seconds", "computation_start_time", "iot_data_kafka_topic"]
         labels = {
             "name": _("Name"),
             "description": _("Description"),
@@ -19,6 +19,7 @@ class JobForm(ModelForm):
             "container_cpu_limit": _("Container CPU limit"),
             "container_memory_limit_in_mb": _("Container memory limit in Megabytes"),
             "computation_duration_in_seconds": _("Computation duration"),
+            "computation_start_time": _("Computation start time in UTC timezone format"),
             "iot_data_kafka_topic": _("Kafka topic"),
         }
         help_texts = {
@@ -29,8 +30,17 @@ class JobForm(ModelForm):
             "container_cpu_limit": _("The amount of CPU the container can use. Please provide a floating point number."),
             "container_memory_limit_in_mb": _("The amount of memory the container can use in megabytes. The value must be between 512 and 2048 Megabytes."),
             "computation_duration_in_seconds": _("The duration of computation measured in seconds"),
+            "computation_start_time": _("Schedule the start time of the job computation. Use the UTC timezone and not your local timezone."),
             "iot_data_kafka_topic": _("The Kafka topic where the IoT data is published."),
         }
+        widgets = {
+            'computation_start_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super(JobForm, self).__init__(*args, **kwargs)
+        self.fields['computation_start_time'].required = False
+
 
 class EnviromentVariableForm(ModelForm):
     class Meta:

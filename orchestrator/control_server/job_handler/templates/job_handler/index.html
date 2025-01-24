@@ -14,6 +14,7 @@
                     <th scope="col">Container Image</th>
                     <th scope="col">Containers</th>
                     <th scope="col">Duration in Seconds</th>
+                    <th scope="col">Initial scheduled start time</th>
                     <th scope="col">Kafka Topic</th>
                     <th scope="col">Actions</th>
                 </tr>
@@ -117,6 +118,13 @@
             jobComputationDuration.style.verticalAlign = 'middle';
             jobComputationDuration.textContent = job.computation_duration_in_seconds;
             jobRow.appendChild(jobComputationDuration);
+
+            // Job start time
+            const jobComputationStartTime = document.createElement('td');
+            jobComputationStartTime.classList.add('text-center');
+            jobComputationStartTime.style.verticalAlign = 'middle';
+            jobComputationStartTime.textContent = job.computation_start_time;
+            jobRow.appendChild(jobComputationStartTime);
 
             // Job IoT kafka topic
             const jobIoTKafkaTopicCell = document.createElement('td');

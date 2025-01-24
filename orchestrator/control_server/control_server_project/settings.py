@@ -195,6 +195,7 @@ CELERY_TASK_ROUTES = {
     'job_handler.tasks.start_job_task': {'queue': 'manual_job_handling'},
     'job_handler.tasks.stop_job_task': {'queue': 'manual_job_handling'},
     'job_handler.tasks.automatic_job_stop_task': {'queue': 'beat'},
+    'job_handler.tasks.automatic_job_start_task': {'queue': 'beat'},
     'job_handler.tasks.monitor_agent_status': {'queue': 'monitor_agent_status'},
     'job_handler.tasks.monitor_job_status': {'queue': 'monitor_job_status'},
 }

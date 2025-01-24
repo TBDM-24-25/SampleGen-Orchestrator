@@ -29,6 +29,7 @@ class Job(models.Model):
     container_cpu_limit = models.FloatField(null=False, default=0.3)
     container_memory_limit_in_mb = models.IntegerField(default=512)
     computation_duration_in_seconds = models.IntegerField(default=300)
+    computation_start_time = models.DateTimeField(null=True)
     iot_data_kafka_topic = models.CharField(max_length=200)
     kafka_timestamp = models.DateTimeField(null=True)
     agent = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True)

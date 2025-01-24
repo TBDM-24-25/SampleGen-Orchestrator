@@ -187,3 +187,39 @@ def automatic_job_stop_task():
         
     return
 
+
+@shared_task
+def automatic_job_start_task():
+    """orchestrates the start of jobs by sending a start message to the kafka topic"""
+    logger = get_global_logger()
+
+    # Get all jobs that are running
+    jobs = Job.objects.filter(status=JobStatus.CREATED)
+
+    if not jobs:
+        return
+
+    for job in jobs:
+        try:
+            # get time parameters
+            current_time = timezone.now()
+            job_start_time = job.computation_start_time
+
+            if not job_start_time:
+                logger.info(f"Job with ID {job.id} does not have a start time")
+                continue
+            
+            # Ensure both datetime objects are timezone-aware
+            if timezone.is_naive(job_start_time):
+                job_start_time = timezone.make_aware(job_start_time)
+            
+            # check if the job has run for the specified duration
+            if current_time >= job_start_time:
+                # Start the job
+                start_job_task.delay(job.id)
+                logger.info(f"Job with ID {job.id} has reached the start time and job start request triggered")
+        except Exception as e:
+            logger.error(f"Error starting job {job.id}: {e}")
+            continue
+        
+    return

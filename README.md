@@ -48,7 +48,7 @@ The Job Handler provides the following features:
 4. **Scalability**: The Job Handler is designed to be scalable, allowing it to handle multiple concurrent jobs and users. It can distribute tasks across multiple Celery workers and manage job orchestration efficiently.
 5. **Reliability**: The Job Handler is designed to be reliable, ensuring that jobs are executed correctly and that users receive accurate information about job status.
 6. **Monitoring**: The Job Handler provides monitoring capabilities for agents and jobs, allowing users to track the status of running jobs and agents in real-time.
-7. **Job scheduling**: The Job Handler supports job scheduling, allowing users to schedule jobs to run for specific durations. Users can monitor the computation duration in seconds for jobs and monitor job progress by observing the job status in the UI.
+7. **Job scheduling**: The Job Handler supports job scheduling, allowing users to schedule jobs to run for specific durations and at specific times. Users can monitor the computation duration in seconds for jobs and monitor job progress by observing the job status in the UI.
 8. **Logging**: Like the Container Handler, the Job Handler implements the two custom loggers "django" and "global_logger" for logging to the console and to a file. The Django logger is used for the webserver and global logger for backend components. The loggers are configured via the Django settings file. They report to the console and to a file in the logs directory of the django project.
 
 #### Architecture
@@ -74,6 +74,9 @@ The Channel consumer implements a consumer group and websocket for the frontend.
 
 ##### Celery Workers
 The Celery Workers host independent processes (Tasks) handling the job orchestration. All Tasks are connected to the Kafka cluster to communicate with the Container Handler by consuming and producing messages for Kafka. The tasks are connected to specific Kafka topics. All tasks are running in parallel and are distributed over multiple Celery Workers. The Celery Workers are running in a distributed environment and are connected to the Redis message broker. All tasks are handling business logic independently and are manipulating the main database (SQlite).
+
+###### Job Start Scheduler
+The Job Start Scheduler is responsible for monitoring the job starting conditions (DateTime in UCT format). If the conditions are fulfilled, the Container Handler is requested to start the jobs. The Job Start Scheduler is producing messages to the Kafka topic Job_Instruction.
 
 ###### Job Stop Scheduler
 The Job Stop Scheduler is responsible for monitoring running jobs. If the jobs have reached their maximum computation time, Container Handler is requested to stop the jobs. The Job Stop Scheduler is producing messages to the Kafka topic Job_Instruction.
@@ -302,17 +305,13 @@ Although the DCF is already quite powerful, it does have limitations, which will
 
 - **Outlook 05**: Future work should focus on migrating the database to a more robust solution, such as PostgreSQL. This can be achieved by adjusting the Django settings file accordingly and deploying a PostgreSQL instance.
 
-- **Limitation 06**: The Job Handler does not support scheduling jobs to run at specific times. It only supports immediate job execution and scheduling the job termination.
+- **Limitation 06**: The Job Handler does not support user authentication and authorization. It does not have user management capabilities.
 
-- **Outlook 06**: Future work should focus on adding support for scheduling jobs to run at specific times. This can be achieved by adding a new field to the job model, and ModelForm to store the scheduled time and implementing a seperate the job start scheduler task which will start the job at the scheduled time.
+- **Outlook 06**: Future work should focus on adding user authentication and authorization to the Job Handler. This can be achieved by implementing user authentication using Django's built-in authentication system and adding user management capabilities to the Job Handler.
 
-- **Limitation 07**: The Job Handler does not support user authentication and authorization. It does not have user management capabilities.
+- **Limitation 07**: The SampleGen Orchestrator system is not yet fully containerized. Kafka and its components as well as the Redis instances are containerized via Docker Compose, but the Job Handler and the Container Handler are not yet containerized.
 
-- **Outlook 07**: Future work should focus on adding user authentication and authorization to the Job Handler. This can be achieved by implementing user authentication using Django's built-in authentication system and adding user management capabilities to the Job Handler.
-
-- **Limitation 08**: The SampleGen Orchestrator system is not yet fully containerized. Kafka and its components as well as the Redis instances are containerized via Docker Compose, but the Job Handler and the Container Handler are not yet containerized.
-
-- **Outlook 08**: Containerization of the Job Handler and the Container Handler using Docker is recommended. The Containerization will make it easier to deploy and scale the system in a production environment.
+- **Outlook 07**: Containerization of the Job Handler and the Container Handler using Docker is recommended. The Containerization will make it easier to deploy and scale the system in a production environment.
 
 ## 6) Licensing
 The DCF is available under the MIT [license](./LICENSE).

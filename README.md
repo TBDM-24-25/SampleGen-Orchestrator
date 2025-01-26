@@ -218,6 +218,8 @@ Once the integration described in the four steps above has been completed, pleas
 
 Please note that, in addition to confluent-kafka, other libraries can be utilised. If you do not wish to work with Python, you may use Java instead. In both cases, adjust the source code accordingly.
 
+Last but not least, it is important to mention that, depending on the needs, the Kafka schema registry and Avro schemes can be implemented as well. Furthermore, we do not provide guidance on consuming messages created by the data generators, but there are many respected resources which explain how to do this.
+
 ## 4) Usage
 ### 4.1) Subtitle 1
 @Lendro & @Christian, as soon as Graphical User Interface is ready

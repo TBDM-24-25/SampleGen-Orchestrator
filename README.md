@@ -156,12 +156,10 @@ To set up and run the Job Handler follow the steps subsequently:
     ```bash
     python3.13 orchestrator/control_server/manage.py runserver
     ```
-    If successful, the server is accessible under http://127.0.0.1:8000/job_handler or localhost:8000/job_handler
+    (Optional, but highly recommended) Check if the server is accessible under http://127.0.0.1:8000/job_handler or localhost:8000/job_handler
 
+    Please note: Do not perform any actions yet, as the subsequent steps 5 and 6 must be completed first for the system to be fully operational
 
-(Optional, but highly recommended) After the startup of Kafka, you can access:
-3.1 Kafka Grapical User Interface: http://localhost:8080
-3.2 Kafka Schema registry: http://localhost:8081
 
 
 5. Run the following commands to start the Celery Workers. Open a new terminal for every command, four in total (make sure the venv is activated properly, use `source venv/bin/activate` otherwise):
@@ -181,16 +179,13 @@ To set up and run the Job Handler follow the steps subsequently:
         ```bash
         cd orchestrator/control_server/ && celery -A control_server_project worker --queues monitor_job_status --loglevel=info
         ```
-6. Start the Celery Beat Scheduler by running in a new terminal (make sure the venv is activated properly, use `source venv/bin/activate` otherwise):
+6. Start the Celery Beat Scheduler by running the following command in a new terminal (make sure the venv is activated properly, use `source venv/bin/activate` otherwise):
     ```bash
     cd orchestrator/control_server/ && celery -A control_server_project beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     ```
-Once all the services are running, the application can be accessed under http://127.0.0.1:8000/job_handler or localhost:8000/job_handler
+(Optional, but highly recommended) Refer to the [log file](./orchestrator/control_server/logs/app.log) to ensure that the system has booted up correctly
 
-
-(Optional, but highly recommended) After the startup of Kafka, you can access:
-3.1 Kafka Grapical User Interface: http://localhost:8080
-3.2 Kafka Schema registry: http://localhost:8081
+Once all the services are running, the application can be accessed and used under http://127.0.0.1:8000/job_handler or localhost:8000/job_handler
 
 ### 3.5) Preparing the Data Generator(s)
 In order to integrate the Data Generator(s) into the DCF, some minor adjustments (within the relevant parts of the application source code) are required, as shown below:

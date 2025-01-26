@@ -275,7 +275,7 @@ def delete_containers(
                      index + 1, number_of_containers, container_image_name)
         try:
             container = docker_client.containers.get(container_id)
-            container.kill()
+            container.stop()
             container.remove()
             logger.info('Container %s/%s with Image %s has been successfully stopped and removed, Container ID: %s',
                         index + 1, number_of_containers, container_image_name, container_id)

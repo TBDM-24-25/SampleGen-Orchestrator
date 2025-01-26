@@ -65,12 +65,12 @@ The graphical representation of the Job Handler architecture and the interaction
     - **Job Stopper**: Asynchronous task triggered by the web server when a user requests that a job be stopped. If the conditions for stopping the job are fulfilled, the task requests that the Container Handler stop and delete the corresponding containers. The Job Stopper produces messages to the Kafka topic Job_Instruction.
     - **Job Stop Scheduler**: Responsible to monitor running jobs. In the event that the jobs have reached their maximum computation time, the Container Handler will be requested to stop the jobs. The Job Stop Scheduler produces messages to the Kafka topic Job_Instruction.
 
-The job handling, besides basic CRUD (no update), is handled fully asynchronously and concurrently with Celery.The business logic (tasks) is distributed over multiple Celery Workers, which operate independently and concurrently.Empirical testing showed that operating all tasks on a single Celery Worker resulted in communication and performance bottlenecks.Therefore, the tasks are distributed over multiple Celery Workers and Redis message queues. The Beat Worker is responsible for Celery Beat tasks, while the Manual Job Handling Worker executes asynchronous tasks manually triggered by users.As the Celery Worker workload for manual tasks is not permanent, these tasks are combined in one Celery Worker.The Agent Monitor and Job Monitor operate in separate Celery Workers since they run permanently. 
+The job handling, besides basic CRUD (no update), is handled fully asynchronously and concurrently with Celery.The business logic (tasks) is distributed over multiple Celery Workers, which operate independently and concurrently. Empirical testing showed that operating all tasks on a single Celery Worker resulted in communication and performance bottlenecks. Therefore, the tasks are distributed over multiple Celery Workers and Redis message queues. The Beat Worker is responsible for Celery Beat tasks, while the Manual Job Handling Worker executes asynchronous tasks manually triggered by users. As the Celery Worker workload for manual tasks is not permanent, these tasks are combined in one Celery Worker. The Agent Monitor and Job Monitor operate in separate Celery Workers since they run permanently. 
 
 ### 2.3) Container Handler (Agent)
 In order for the Container Handler to be able to start/stop containers and provide monitoring capabilities, several components are required - of particular interest is the Container Handler (Agent) process, which represents a multithreded environment, consisting of the following two threads:
 - **Agent Monitor**: Responsible for monitoring the health of the Docker Daemon and reporting on the containers under the responsibility of the specific agent. The Agent Monitor provides the monitoring result to the Job Handler via the Kafka topic Agent_Status at a predefined interval. If access to the Docker Daemon fails, not only is an unsuccessful monitoring result sent, but the container handler (thread) is also blocked, meaning that no further messages are consumed.
-- **Container Handler**: Responsible for starting/stopping containers by consuming messages from the Job_Instruction Kafka topic and communicating with the Docker Daemon. After each and every job is processed, a status message targeting the specific processed job is created in the Job_Status Kafka topic. Sophisticated exception handling ensures that the Container Handler runs as reliably as possible.
+- **Container Controller**: Responsible for starting/stopping containers by consuming messages from the Job_Instruction Kafka topic and communicating with the Docker Daemon. After each and every job is processed, a status message targeting the specific processed job is created in the Job_Status Kafka topic. Sophisticated exception handling ensures that the Container Controller runs as reliably as possible.
 
 The graphical representation of the Container Handler (Agent) architecture and the interactions necessary can be found in the Figure 03 below:
 ![image](docs/images/container_handler.png)
@@ -89,8 +89,8 @@ All commands outlined in this chapter must be run from the root directory of thi
 
 ### 3.1) Prerequisites
 Ensure that the following requirements are met:
-- Installed [Python v3.13](https://www.python.org/downloads/release/python-3130)
-- Up and running [Docker Daemon](https://docs.docker.com/engine/install) on all host machines on which the Container Handler (Agent) is to run
+- Installed [Python v3.13](https://www.python.org/downloads/release/python-3130).
+- Up and running [Docker Daemon](https://docs.docker.com/engine/install) on all host machines on which the Container Handler (Agent) is to run.
 - (Optional, but highly recommended) A Python virtual environment (venv). To do so, proceed as follows:
     1. Create the Python virtual environment named venv:
         ```bash
@@ -109,11 +109,11 @@ Ensure that the following requirements are met:
         ```bash
         python3.13 -m pip install -r requirements.txt
         ```
-- It should be noted that the available [.env File](./.env) provides fundamental configuration options. Despite the possibility that this may not align with best practice, it was deemed an appropriate course of action in order to facilitate more efficient handling of the DCF
+- It should be noted that the available [.env File](./.env) provides fundamental configuration options. Despite the possibility that this may not align with best practice, it was deemed an appropriate course of action in order to facilitate more efficient handling of the DCF.
 
 ### 3.2) Kafka
 With the provided [Docker Compose File](./kafka/docker-compose.yaml), the installation of Kafka is straightforward. As additional configuration is performed automatically during startup (see [initialize.py](./kafka/initialize.py) and initializer container within Docker Compose File), only the subsequent steps must be completed:
-1. Open a new terminal or reuse the one from [Section 3.1](#31-prerequisites) (make sure the venv is activated properly, use `source venv/bin/activate` otherwise)
+1. Open a new terminal or reuse the one from [Section 3.1](#31-prerequisites) (make sure the venv is activated properly, use `source venv/bin/activate` otherwise).
 2. Start Kafka, the GUI, the Schema registry and the initialization by running the following command:
    ```bash
     docker compose -f kafka/docker-compose.yaml up -d
@@ -127,27 +127,27 @@ With the provided [Docker Compose File](./kafka/docker-compose.yaml), the instal
 
 ### 3.3) Container Handler (Agent)
 To start up an instance of the Container Handler (Agent), proceed as follows:
-1. Open a new terminal or reuse the one from [Section 3.2](#32-kafka) (make sure the venv is activated properly, use `source venv/bin/activate` otherwise)
+1. Open a new terminal or reuse the one from [Section 3.2](#32-kafka) (make sure the venv is activated properly, use `source venv/bin/activate` otherwise).
 2. Start the Container Handler (Agent) by performing the subsequent command :
     ```bash
     python3.13 -m orchestrator.container_handler.container_handler
     ```
-3. (Optional, but highly recommended) Refer to the [log file](./logs/app.log) to ensure that the system has booted up correctly
+3. (Optional, but highly recommended) Refer to the [log file](./logs/app.log) to ensure that the system has booted up correctly.
 
 ### 3.4) Job Handler
 Each command should run in its own terminal window or session to ensure all processes operate concurrently.
 For efficiency during development, tools like tmux or screen to manage multiple terminal sessions in one window can be used. 
 
 To set up and run the Job Handler follow the steps subsequently:
-1. Open a new terminal (make sure the venv is activated properly, use `source venv/bin/activate` otherwise)
+1. Open a new terminal (make sure the venv is activated properly, use `source venv/bin/activate` otherwise).
 2. Start Redis with the provided [Docker Compose File](./orchestrator/control_server/docker-compose.yaml) by running the following command:
     ```bash
     docker-compose -f orchestrator/control_server/docker-compose.yaml up -d
     # be aware: Redis might take a few seconds to be deployed
     ```
     This command will spin up the following two Redis instances:
-    - redis_channels: enabling asynchronous parallelized web sockets and consumer groups with Django Channels
-    - redis_celery: serving celery workers. The Broker  and the Result Backend use two seperate Databases
+    - redis_channels: Enabling asynchronous parallelized web sockets and consumer groups with Django Channels.
+    - redis_celery: Serving celery workers. The Broker  and the Result Backend use two seperate Databases.
 3. Apply Django migrations (create database schema) by running:
     ```bash
     python3.13 orchestrator/control_server/manage.py migrate
@@ -156,26 +156,24 @@ To set up and run the Job Handler follow the steps subsequently:
     ```bash
     python3.13 orchestrator/control_server/manage.py runserver
     ```
-    (Optional, but highly recommended) Check if the server is accessible under http://127.0.0.1:8000/job_handler or localhost:8000/job_handler
+    (Optional, but highly recommended) Check if the server is accessible under http://127.0.0.1:8000/job_handler or localhost:8000/job_handler.
 
-    Please note: Do not perform any actions yet, as the subsequent steps 5 and 6 must be completed first for the system to be fully operational
-
-
+    Please note: Do not perform any actions yet, as the subsequent steps 5 and 6 must be completed first for the system to be fully operational.
 
 5. Run the following commands to start the Celery Workers. Open a new terminal for every command, four in total (make sure the venv is activated properly, use `source venv/bin/activate` otherwise):
     - Worker for manual job handling:
         ```bash
         cd orchestrator/control_server/ && celery -A control_server_project worker --queues manual_job_handling --loglevel=info
         ```
-    - Worker for Celery Beat tasks
+    - Worker for Celery Beat tasks:
         ```bash
         cd orchestrator/control_server/ && celery -A control_server_project worker --queues beat --loglevel=info
         ```
-    - Worker for monitoring agent status
+    - Worker for monitoring agent status:
         ```bash
         cd orchestrator/control_server/ && celery -A control_server_project worker --queues monitor_agent_status --loglevel=info
         ```
-    - Worker for monitoring job status
+    - Worker for monitoring job status:
         ```bash
         cd orchestrator/control_server/ && celery -A control_server_project worker --queues monitor_job_status --loglevel=info
         ```
@@ -183,9 +181,9 @@ To set up and run the Job Handler follow the steps subsequently:
     ```bash
     cd orchestrator/control_server/ && celery -A control_server_project beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     ```
-(Optional, but highly recommended) Refer to the [log file](./orchestrator/control_server/logs/app.log) to ensure that the system has booted up correctly
+(Optional, but highly recommended) Refer to the [log file](./orchestrator/control_server/logs/app.log) to ensure that the system has booted up correctly.
 
-Once all the services are running, the application can be accessed and used under http://127.0.0.1:8000/job_handler or localhost:8000/job_handler
+Once all the services are running, the application can be accessed and used under http://127.0.0.1:8000/job_handler or localhost:8000/job_handler.
 
 ### 3.5) Preparing the Data Generator(s)
 In order to integrate the Data Generator(s) into the DCF, some minor adjustments (within the relevant parts of the application source code) are required, as shown below:

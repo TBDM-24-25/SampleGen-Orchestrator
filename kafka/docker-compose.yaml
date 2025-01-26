@@ -14,7 +14,7 @@ services:
       # 9092 for host communication, 9093 for internal docker network communication
       KAFKA_LISTENERS: CONTROLLER://0.0.0.0:9091,HOST://0.0.0.0:9092,DOCKER://0.0.0.0:9093
       # listeners to publish for clients to use
-      KAFKA_ADVERTISED_LISTENERS: CONTROLLER://kafka:9091,HOST://localhost:9092,DOCKER://kafka:9093
+      KAFKA_ADVERTISED_LISTENERS: HOST://localhost:9092,DOCKER://kafka:9093
       # mapping between listener names and security protocols
       # PLAINTEXT protocol, standard protocol, for unencrypted traffic
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,DOCKER:PLAINTEXT,HOST:PLAINTEXT

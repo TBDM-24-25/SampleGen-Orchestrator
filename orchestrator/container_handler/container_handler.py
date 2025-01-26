@@ -3,6 +3,8 @@ from time import sleep, time
 import json
 from getmac import get_mac_address
 from jinja2 import Environment, FileSystemLoader
+from dotenv import load_dotenv
+import os
 
 import docker
 from docker.errors import DockerException, NotFound
@@ -16,6 +18,9 @@ from orchestrator.services.status import Status
 
 # initialize logger
 logger = GlobalLogger.get_logger()
+
+# load .env file
+load_dotenv()
 
 # initialize KafkaService with group_id Job_Consumers
 kafka_service = KafkaService(group_id='Job_Consumers')
@@ -219,6 +224,7 @@ def create_containers(
     for index in range(number_of_containers):
         logger.info('Starting Container %s/%s with Image %s',
                      index + 1, number_of_containers, container_image_name)
+
         try:
             container = docker_client.containers.run(
                 image=container_image_name,
@@ -226,6 +232,7 @@ def create_containers(
                 nano_cpus=cpu_limit_nano,
                 environment=environment_variables,
                 labels=['sample_gen_orchestrator'],
+                network=os.getenv('DOCKER_NETWORK'),
                 detach=True)
 
             container_id = container.id

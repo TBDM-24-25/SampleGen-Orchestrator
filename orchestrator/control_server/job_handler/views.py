@@ -92,12 +92,13 @@ def create_job(request):
 
         # Save the related environment variables
         enviroment_variables = enviroment_variable_formset.save(commit=False)
-        for enviroment_variable in enviroment_variables:
-            enviroment_variable.job = job
-            enviroment_variable.save()
+        if enviroment_variables:
+            for enviroment_variable in enviroment_variables:
+                enviroment_variable.job = job
+                enviroment_variable.save()
         
+            logger.info(f"Enviroment variables for job {job.id} created and stored in the database")
         
-        logger.info(f"Enviroment variables for job {job.id} created and stored in the database")
         # Redirect to the index page, reverse() is used to avoid hardcoding the URL
         logger.info(f"Job with ID {job.id} creation successful")
         return redirect("index")

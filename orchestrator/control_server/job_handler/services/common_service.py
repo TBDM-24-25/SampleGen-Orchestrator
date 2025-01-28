@@ -16,7 +16,7 @@ def json_serial_date_time(obj):
         return obj.isoformat()
     raise TypeError("Type %s not serializable" % type(obj))
 
-def render_start_job_instruction_message(job, enviroment_variables):
+def render_start_job_instruction_message(job, enviroment_variables=None):
     logger = get_global_logger()
     # Prepare dictionary with enviroment variables. The KAFKA_TOPIC and KAFKA_BOOTSTRAP_SERVERS_DOCKER are required
     load_dotenv()
@@ -33,8 +33,9 @@ def render_start_job_instruction_message(job, enviroment_variables):
         prepared_enviroment_variables = {}
     # Load the remaining enviroment variables from the DB and add them in the dictionary
     try:
-        for enviroment_variable in enviroment_variables:
-            prepared_enviroment_variables[enviroment_variable.variable_name] = enviroment_variable.variable_value
+        if enviroment_variables:
+            for enviroment_variable in enviroment_variables:
+                prepared_enviroment_variables[enviroment_variable.variable_name] = enviroment_variable.variable_value
     except TypeError:
         logger.error(f"TypeError: {e} - Check if 'enviroment_variables' is iterable.")
         prepared_enviroment_variables = {}

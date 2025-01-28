@@ -50,6 +50,11 @@ class EnviromentVariableForm(ModelForm):
             "variable_name": _("Name"),
             "variable_value": _("Value"),
             }
+        
+    def __init__(self, *args, **kwargs):
+        super(EnviromentVariableForm, self).__init__(*args, **kwargs)
+        self.fields['variable_name'].required = False
+        self.fields['variable_value'].required = False
     
 
 class BaseEnviromentVariableFormset(BaseModelFormSet):
@@ -60,8 +65,10 @@ class BaseEnviromentVariableFormset(BaseModelFormSet):
         
         for form in self.forms:
             # Check if the form is valid and has cleaned data
-            if not form.cleaned_data.get('variable_name') and not form.cleaned_data.get('variable_value'):
-                form.add_error('variable_value', 'Value is required if Name is set.')
+            if not form.cleaned_data.get('variable_name') and form.cleaned_data.get('variable_value'):
                 form.add_error('variable_name', 'Name is required if Value is set.')
+            
+            if form.cleaned_data.get('variable_name') and not form.cleaned_data.get('variable_value'):
+                form.add_error('variable_value', 'Value is required if Name is set.')
 
 

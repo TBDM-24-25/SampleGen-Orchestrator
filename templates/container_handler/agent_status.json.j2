@@ -1,0 +1,10 @@
+{
+"operation": "heartbeat",
+"status": "{{ status }}", {# either successful or unsucessful #}
+"metadata": {
+    "agent_id": "{{ agent_id }}", {# set globally, callable in template #}
+    "timestamp": "{{ get_timestamp() }}",
+    "failed_checks": "{{ failed_checks }}" {# set globally, callable in template #},
+    "containers_running": "{{ containers_running }}"
+    }
+}
